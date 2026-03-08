@@ -48,6 +48,13 @@ export default function EditorPage() {
     brushSize,
     setBrushSize,
     pickedColor,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    setSelectedFill,
+    setSelectedStroke,
+    getSelectedObjectProps,
   } = useFabricCanvas();
 
   const { onlineUsers } = useRealtimeCollaboration(projectId);
