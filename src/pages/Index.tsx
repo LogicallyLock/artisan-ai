@@ -1,35 +1,20 @@
-import { useState } from "react";
-import { TopMenuBar } from "@/components/studio/TopMenuBar";
-import { ToolsPanel } from "@/components/studio/ToolsPanel";
-import { CanvasArea } from "@/components/studio/CanvasArea";
-import { LayersPanel } from "@/components/studio/LayersPanel";
-import { PropertiesPanel } from "@/components/studio/PropertiesPanel";
-import { TimelinePanel } from "@/components/studio/TimelinePanel";
-import { AIPromptBar } from "@/components/studio/AIPromptBar";
+import { useAuth } from "@/contexts/AuthContext";
+import { Navigate } from "react-router-dom";
 
-const Index = () => {
-  const [mode, setMode] = useState<"image" | "video">("image");
+export default function Index() {
+  const { user, loading } = useAuth();
 
-  return (
-    <div className="h-screen flex flex-col overflow-hidden">
-      <TopMenuBar mode={mode} onModeChange={setMode} />
-
-      <div className="flex-1 flex overflow-hidden relative">
-        <ToolsPanel />
-
-        <div className="flex-1 flex flex-col overflow-hidden relative">
-          <div className="flex-1 flex overflow-hidden relative">
-            <CanvasArea />
-            <AIPromptBar />
-          </div>
-          {mode === "video" && <TimelinePanel />}
-        </div>
-
-        <LayersPanel />
-        <PropertiesPanel />
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center studio-surface text-muted-foreground">
+        Loading...
       </div>
-    </div>
-  );
-};
+    );
+  }
 
-export default Index;
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
+}
