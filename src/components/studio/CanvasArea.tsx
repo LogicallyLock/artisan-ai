@@ -12,7 +12,7 @@ interface CanvasAreaProps {
 export function CanvasArea({ canvasImageUrl, onImageUpload, filters }: CanvasAreaProps) {
   const [zoom, setZoom] = useState(67);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const displayImage = canvasImageUrl || sampleImage;
+  const displayImage = canvasImageUrl || null;
 
   const cssFilter = filters ? buildCSSFilter(filters) : "none";
   const showVignette = filters && filters.vignette > 0;
