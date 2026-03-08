@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Sparkles, Image, Film, Search, LayoutGrid } from "lucide-react";
+import { X, Sparkles, ImageIcon, Film, Search, LayoutGrid } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -162,22 +162,15 @@ export function TemplateGallery({ open, onClose }: TemplateGalleryProps) {
                     className="group text-left bg-secondary/50 hover:bg-secondary border border-border hover:border-primary/30 rounded-xl overflow-hidden transition-all disabled:opacity-50"
                   >
                     {/* Preview */}
-                    <div className="h-24 bg-muted flex items-center justify-center relative">
-                      <div className="flex flex-col items-center gap-1.5">
+                    <div className="h-28 bg-muted/50 flex items-center justify-center relative">
+                      <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors">
                         {t.type === "video" ? (
                           <Film className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                         ) : (
-                          <Image className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <ImageIcon className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                         )}
-                        <div
-                          className="border-2 border-border/60 bg-background/60 rounded-sm"
-                          style={{
-                            width: Math.min(60, t.width / (t.height / 40)),
-                            height: Math.min(45, t.height / (t.width / 55)),
-                          }}
-                        />
                       </div>
-                      <span className="absolute top-2 right-2 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                      <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-secondary text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
                         {t.category}
                       </span>
                     </div>
