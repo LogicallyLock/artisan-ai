@@ -90,7 +90,8 @@ export function useFabricCanvas() {
       }
 
       if (tool === "Zoom") {
-        const point = new fabric.Point(opt.e.offsetX, opt.e.offsetY);
+        const pointer = canvas.getScenePoint(evt);
+        const point = new fabric.Point(pointer.x, pointer.y);
         const direction = evt.altKey ? 0.9 : 1.1;
         let newZoom = canvas.getZoom() * direction;
         newZoom = Math.min(5, Math.max(0.1, newZoom));
