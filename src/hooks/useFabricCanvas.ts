@@ -360,6 +360,14 @@ export function useFabricCanvas() {
       }
     });
 
+    // Save history on every object modification
+    const saveHistory = () => history.saveState(canvas);
+    canvas.on("object:added", saveHistory);
+    canvas.on("object:modified", saveHistory);
+    canvas.on("object:removed", saveHistory);
+    // Save initial state
+    history.saveState(canvas);
+
     return canvas;
   }, []);
 
