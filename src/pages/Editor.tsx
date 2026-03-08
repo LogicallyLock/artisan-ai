@@ -197,10 +197,10 @@ export default function EditorPage() {
         onProjectNameChange={setProjectName}
         onSave={saveProject}
         onBack={() => navigate("/dashboard")}
-        onUndo={() => {}}
-        onRedo={() => {}}
-        canUndo={false}
-        canRedo={false}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
         onExport={() => setExportOpen(true)}
         onShare={() => setShareOpen(true)}
         collaborators={<CollaboratorAvatars users={onlineUsers} />}
