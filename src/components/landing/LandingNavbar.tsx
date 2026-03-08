@@ -113,7 +113,7 @@ export function LandingNavbar() {
                 <a
                   key={link.label}
                   href={link.href}
-                  onClick={() => setMobileOpen(false)}
+                  onClick={(e) => scrollToSection(e, link.href)}
                   className="block text-sm text-muted-foreground hover:text-foreground"
                 >
                   {link.label}
