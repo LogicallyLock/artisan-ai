@@ -8,6 +8,7 @@ import { FabricCanvas } from "@/components/studio/FabricCanvas";
 import { InteractiveLayersPanel } from "@/components/studio/InteractiveLayersPanel";
 import { TimelinePanel } from "@/components/studio/TimelinePanel";
 import { AIPromptBar } from "@/components/studio/AIPromptBar";
+import { ToolOptionsBar } from "@/components/studio/ToolOptionsBar";
 import { ExportDialog } from "@/components/studio/ExportDialog";
 import { ShareDialog } from "@/components/studio/ShareDialog";
 import { useRealtimeCollaboration, CollaboratorAvatars } from "@/components/studio/RealtimeCollaboration";
