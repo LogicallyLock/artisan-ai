@@ -1,11 +1,32 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState } from "react";
+import { TopMenuBar } from "@/components/studio/TopMenuBar";
+import { ToolsPanel } from "@/components/studio/ToolsPanel";
+import { CanvasArea } from "@/components/studio/CanvasArea";
+import { LayersPanel } from "@/components/studio/LayersPanel";
+import { PropertiesPanel } from "@/components/studio/PropertiesPanel";
+import { TimelinePanel } from "@/components/studio/TimelinePanel";
+import { AIPromptBar } from "@/components/studio/AIPromptBar";
 
 const Index = () => {
+  const [mode, setMode] = useState<"image" | "video">("image");
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
+    <div className="h-screen flex flex-col overflow-hidden">
+      <TopMenuBar mode={mode} onModeChange={setMode} />
+
+      <div className="flex-1 flex overflow-hidden relative">
+        <ToolsPanel />
+
+        <div className="flex-1 flex flex-col overflow-hidden relative">
+          <div className="flex-1 flex overflow-hidden relative">
+            <CanvasArea />
+            <AIPromptBar />
+          </div>
+          {mode === "video" && <TimelinePanel />}
+        </div>
+
+        <LayersPanel />
+        <PropertiesPanel />
       </div>
     </div>
   );
