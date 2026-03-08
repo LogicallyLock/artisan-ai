@@ -3,17 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { TopMenuBar } from "@/components/studio/TopMenuBar";
-import { ToolsPanel } from "@/components/studio/ToolsPanel";
-import { CanvasArea } from "@/components/studio/CanvasArea";
-import { LayersPanel } from "@/components/studio/LayersPanel";
-import { PropertiesPanel } from "@/components/studio/PropertiesPanel";
+import { InteractiveToolsPanel } from "@/components/studio/InteractiveToolsPanel";
+import { FabricCanvas } from "@/components/studio/FabricCanvas";
+import { InteractiveLayersPanel } from "@/components/studio/InteractiveLayersPanel";
 import { TimelinePanel } from "@/components/studio/TimelinePanel";
 import { AIPromptBar } from "@/components/studio/AIPromptBar";
-import { FiltersPanel, FilterState, DEFAULT_FILTERS } from "@/components/studio/FiltersPanel";
 import { ExportDialog } from "@/components/studio/ExportDialog";
 import { ShareDialog } from "@/components/studio/ShareDialog";
 import { useRealtimeCollaboration, CollaboratorAvatars } from "@/components/studio/RealtimeCollaboration";
-import { useUndoRedo } from "@/hooks/useUndoRedo";
+import { useFabricCanvas } from "@/hooks/useFabricCanvas";
 import { toast } from "sonner";
 
 export default function EditorPage() {
@@ -25,54 +23,69 @@ export default function EditorPage() {
   const [loading, setLoading] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
-  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
-  const { current: canvasImageUrl, push: pushImage, undo, redo, canUndo, canRedo } = useUndoRedo<string | null>(null);
+  const {
+    initCanvas,
+    layers,
+    activeTool,
+    setActiveTool,
+    selectedLayerId,
+    selectLayer,
+    zoom,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    addImageFromUrl,
+    addAIImage,
+    deleteSelected,
+    toggleLayerVisibility,
+    toggleLayerLock,
+    setLayerOpacity,
+    exportCanvasAsDataUrl,
+  } = useFabricCanvas();
+
   const { onlineUsers } = useRealtimeCollaboration(projectId);
-
-  // Listen for realtime project updates from collaborators
-  useEffect(() => {
-    if (!projectId) return;
-    const channel = supabase
-      .channel(`project-sync:${projectId}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "projects", filter: `id=eq.${projectId}` },
-        (payload) => {
-          const updated = payload.new as any;
-          // Only apply changes from other users
-          if (updated.canvas_data?.imageUrl && updated.canvas_data.imageUrl !== canvasImageUrl) {
-            pushImage(updated.canvas_data.imageUrl);
-          }
-          if (updated.name !== projectName) {
-            setProjectName(updated.name);
-          }
-        }
-      )
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
-  }, [projectId]);
 
   useEffect(() => {
     if (!projectId) return;
     loadProject();
   }, [projectId]);
 
+  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
-        e.preventDefault();
-        if (e.shiftKey) { redo(); } else { undo(); }
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      
+      if (e.key === "Delete" || e.key === "Backspace") {
+        deleteSelected();
+        return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === "y") {
+
+      const shortcuts: Record<string, () => void> = {
+        v: () => setActiveTool("Select"),
+        m: () => setActiveTool("Move"),
+        h: () => setActiveTool("Pan"),
+        t: () => setActiveTool("Text"),
+        r: () => setActiveTool("Rectangle"),
+        e: () => setActiveTool("Ellipse"),
+        b: () => setActiveTool("Brush"),
+        x: () => setActiveTool("Eraser"),
+      };
+
+      if (!e.metaKey && !e.ctrlKey && shortcuts[e.key.toLowerCase()]) {
         e.preventDefault();
-        redo();
+        shortcuts[e.key.toLowerCase()]();
+      }
+
+      // Ctrl+S to save
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        saveProject();
       }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [undo, redo]);
+  }, [deleteSelected, setActiveTool]);
 
   const loadProject = async () => {
     const { data, error } = await supabase
@@ -89,25 +102,27 @@ export default function EditorPage() {
 
     setProjectName(data.name);
     setMode(data.type as "image" | "video");
+    setLoading(false);
+
+    // Load saved image into canvas after init
     const canvasData = data.canvas_data as any;
     if (canvasData?.imageUrl) {
-      pushImage(canvasData.imageUrl);
+      // Delay to let canvas initialize
+      setTimeout(() => {
+        addImageFromUrl(canvasData.imageUrl, "Saved Image");
+      }, 500);
     }
-    if (canvasData?.filters) {
-      setFilters({ ...DEFAULT_FILTERS, ...canvasData.filters });
-    }
-    setLoading(false);
   };
 
   const handleImageUpload = async (localUrl: string) => {
-    pushImage(localUrl);
+    await addImageFromUrl(localUrl, "Imported Image");
 
     if (user && projectId) {
       try {
         const response = await fetch(localUrl);
         const blob = await response.blob();
         const ext = blob.type.split("/")[1] || "png";
-        const filePath = `${user.id}/${projectId}/canvas.${ext}`;
+        const filePath = `${user.id}/${projectId}/upload-${Date.now()}.${ext}`;
 
         const { error } = await supabase.storage
           .from("project-media")
@@ -115,11 +130,6 @@ export default function EditorPage() {
 
         if (error) { console.error("Upload error:", error); return; }
 
-        const { data: urlData } = supabase.storage
-          .from("project-media")
-          .getPublicUrl(filePath);
-
-        pushImage(urlData.publicUrl);
         toast.success("Image imported!");
       } catch (err) {
         console.error("Upload failed:", err);
@@ -127,25 +137,27 @@ export default function EditorPage() {
     }
   };
 
-  const handleAIResult = (imageUrl: string) => {
-    pushImage(imageUrl);
+  const handleAIResult = async (imageUrl: string, description: string) => {
+    await addAIImage(imageUrl, description);
+    toast.success("AI result added as editable layer!");
   };
 
   const saveProject = useCallback(async () => {
     if (!projectId) return;
+    const canvasDataUrl = exportCanvasAsDataUrl();
     const { error } = await supabase
       .from("projects")
       .update({
         name: projectName,
         type: mode,
-        canvas_data: { imageUrl: canvasImageUrl, filters: filters as unknown as Record<string, number> },
+        canvas_data: { imageUrl: canvasDataUrl },
         layers_data: [],
       })
       .eq("id", projectId);
 
     if (error) { toast.error("Failed to save"); }
     else { toast.success("Project saved!"); }
-  }, [projectId, projectName, mode, canvasImageUrl, filters]);
+  }, [projectId, projectName, mode, exportCanvasAsDataUrl]);
 
   if (loading) {
     return (
@@ -164,43 +176,55 @@ export default function EditorPage() {
         onProjectNameChange={setProjectName}
         onSave={saveProject}
         onBack={() => navigate("/dashboard")}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
+        onUndo={() => {}}
+        onRedo={() => {}}
+        canUndo={false}
+        canRedo={false}
         onExport={() => setExportOpen(true)}
         onShare={() => setShareOpen(true)}
         collaborators={<CollaboratorAvatars users={onlineUsers} />}
       />
 
       <div className="flex-1 flex overflow-hidden relative">
-        <ToolsPanel />
+        <InteractiveToolsPanel
+          activeTool={activeTool}
+          onToolSelect={setActiveTool}
+          onDelete={deleteSelected}
+        />
 
         <div className="flex-1 flex flex-col overflow-hidden relative">
           <div className="flex-1 flex overflow-hidden relative">
-            <CanvasArea
-              canvasImageUrl={canvasImageUrl}
+            <FabricCanvas
+              onInit={initCanvas}
               onImageUpload={handleImageUpload}
-              filters={filters}
+              zoom={zoom}
+              onZoomIn={zoomIn}
+              onZoomOut={zoomOut}
+              onResetZoom={resetZoom}
             />
             <AIPromptBar
-              currentImageUrl={canvasImageUrl}
+              currentImageUrl={exportCanvasAsDataUrl()}
               onAIResult={handleAIResult}
             />
           </div>
           {mode === "video" && <TimelinePanel />}
         </div>
 
-        <div className="flex flex-col border-l border-border">
-          <FiltersPanel filters={filters} onFiltersChange={setFilters} />
-        </div>
-        <PropertiesPanel />
+        <InteractiveLayersPanel
+          layers={layers}
+          selectedLayerId={selectedLayerId}
+          onSelectLayer={selectLayer}
+          onToggleVisibility={toggleLayerVisibility}
+          onToggleLock={toggleLayerLock}
+          onSetOpacity={setLayerOpacity}
+          onDelete={deleteSelected}
+        />
       </div>
 
       <ExportDialog
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        imageUrl={canvasImageUrl}
+        imageUrl={exportCanvasAsDataUrl()}
         mode={mode}
       />
       <ShareDialog
