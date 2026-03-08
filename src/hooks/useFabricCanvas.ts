@@ -783,6 +783,67 @@ export function useFabricCanvas() {
     return canvas.toDataURL({ format: "png", multiplier: 2 });
   }, []);
 
+  const undo = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (canvas) history.restore(canvas, "undo").then(() => syncLayersFromCanvas());
+  }, []);
+
+  const redo = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (canvas) history.restore(canvas, "redo").then(() => syncLayersFromCanvas());
+  }, []);
+
+  // Rebuild layers state from canvas objects after undo/redo
+  const syncLayersFromCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const objects = canvas.getObjects();
+    const newLayers: CanvasLayer[] = objects
+      .filter((obj) => (obj as any).__layerId)
+      .map((obj) => ({
+        id: (obj as any).__layerId,
+        name: (obj as any).__layerId || "Layer",
+        type: "shape" as CanvasLayer["type"],
+        visible: obj.visible !== false,
+        locked: !obj.selectable,
+        opacity: Math.round((obj.opacity ?? 1) * 100),
+        fabricObject: obj,
+      }))
+      .reverse();
+    setLayers(newLayers);
+  }, []);
+
+  const setSelectedFill = useCallback((color: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const active = canvas.getActiveObject();
+    if (active) {
+      active.set("fill", color);
+      canvas.requestRenderAll();
+    }
+  }, []);
+
+  const setSelectedStroke = useCallback((color: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const active = canvas.getActiveObject();
+    if (active) {
+      active.set("stroke", color);
+      canvas.requestRenderAll();
+    }
+  }, []);
+
+  const getSelectedObjectProps = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const active = canvas.getActiveObject();
+    if (!active) return null;
+    return {
+      fill: typeof active.fill === "string" ? active.fill : null,
+      stroke: typeof active.stroke === "string" ? active.stroke : null,
+    };
+  }, []);
+
   return {
     canvasRef,
     containerRef,
