@@ -44,8 +44,18 @@ function useCanvasHistory() {
     if (newIndex < 0 || newIndex >= historyRef.current.length) return;
     indexRef.current = newIndex;
     isRestoringRef.current = true;
-    const json = historyRef.current[newIndex];
-    await canvas.loadFromJSON(json);
+    const jsonStr = historyRef.current[newIndex];
+    const parsed = JSON.parse(jsonStr);
+    // Extract custom __layerId before loading
+    const layerIds = (parsed.objects || []).map((o: any) => o.__layerId || null);
+    await canvas.loadFromJSON(parsed);
+    // Re-apply __layerId to restored objects
+    const objects = canvas.getObjects();
+    objects.forEach((obj, i) => {
+      if (layerIds[i]) {
+        (obj as any).__layerId = layerIds[i];
+      }
+    });
     canvas.requestRenderAll();
     isRestoringRef.current = false;
     updateFlags();
