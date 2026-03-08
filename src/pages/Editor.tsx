@@ -43,6 +43,11 @@ export default function EditorPage() {
     toggleLayerLock,
     setLayerOpacity,
     exportCanvasAsDataUrl,
+    brushColor,
+    setBrushColor,
+    brushSize,
+    setBrushSize,
+    pickedColor,
   } = useFabricCanvas();
 
   const { onlineUsers } = useRealtimeCollaboration(projectId);
