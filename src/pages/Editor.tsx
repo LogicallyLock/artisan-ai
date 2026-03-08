@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,6 +18,7 @@ export default function EditorPage() {
   const [mode, setMode] = useState<"image" | "video">("image");
   const [projectName, setProjectName] = useState("Untitled Project");
   const [loading, setLoading] = useState(true);
+  const [canvasImageUrl, setCanvasImageUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!projectId) return;
@@ -33,13 +34,55 @@ export default function EditorPage() {
 
     if (error || !data) {
       toast.error("Project not found");
-      navigate("/");
+      navigate("/dashboard");
       return;
     }
 
     setProjectName(data.name);
     setMode(data.type as "image" | "video");
+    // Restore canvas image from saved data
+    const canvasData = data.canvas_data as any;
+    if (canvasData?.imageUrl) {
+      setCanvasImageUrl(canvasData.imageUrl);
+    }
     setLoading(false);
+  };
+
+  const handleImageUpload = async (localUrl: string) => {
+    // For local preview
+    setCanvasImageUrl(localUrl);
+
+    // Upload to storage if user is authenticated
+    if (user && projectId) {
+      try {
+        const response = await fetch(localUrl);
+        const blob = await response.blob();
+        const ext = blob.type.split("/")[1] || "png";
+        const filePath = `${user.id}/${projectId}/canvas.${ext}`;
+
+        const { error } = await supabase.storage
+          .from("project-media")
+          .upload(filePath, blob, { upsert: true });
+
+        if (error) {
+          console.error("Upload error:", error);
+          return;
+        }
+
+        const { data: urlData } = supabase.storage
+          .from("project-media")
+          .getPublicUrl(filePath);
+
+        setCanvasImageUrl(urlData.publicUrl);
+        toast.success("Image imported!");
+      } catch (err) {
+        console.error("Upload failed:", err);
+      }
+    }
+  };
+
+  const handleAIResult = (imageUrl: string, description: string) => {
+    setCanvasImageUrl(imageUrl);
   };
 
   const saveProject = useCallback(async () => {
@@ -49,7 +92,7 @@ export default function EditorPage() {
       .update({
         name: projectName,
         type: mode,
-        canvas_data: {},
+        canvas_data: { imageUrl: canvasImageUrl },
         layers_data: [],
       })
       .eq("id", projectId);
@@ -59,7 +102,7 @@ export default function EditorPage() {
     } else {
       toast.success("Project saved!");
     }
-  }, [projectId, projectName, mode]);
+  }, [projectId, projectName, mode, canvasImageUrl]);
 
   if (loading) {
     return (
@@ -77,7 +120,7 @@ export default function EditorPage() {
         projectName={projectName}
         onProjectNameChange={setProjectName}
         onSave={saveProject}
-        onBack={() => navigate("/")}
+        onBack={() => navigate("/dashboard")}
       />
 
       <div className="flex-1 flex overflow-hidden relative">
@@ -85,8 +128,14 @@ export default function EditorPage() {
 
         <div className="flex-1 flex flex-col overflow-hidden relative">
           <div className="flex-1 flex overflow-hidden relative">
-            <CanvasArea />
-            <AIPromptBar />
+            <CanvasArea
+              canvasImageUrl={canvasImageUrl}
+              onImageUpload={handleImageUpload}
+            />
+            <AIPromptBar
+              currentImageUrl={canvasImageUrl}
+              onAIResult={handleAIResult}
+            />
           </div>
           {mode === "video" && <TimelinePanel />}
         </div>
