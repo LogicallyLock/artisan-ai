@@ -16,7 +16,7 @@ function useCanvasHistory() {
 
   const saveState = useCallback((canvas: fabric.Canvas) => {
     if (isRestoringRef.current) return;
-    const json = JSON.stringify(canvas.toJSON());
+    const json = JSON.stringify(canvas.toJSON(['__layerId']));
     // Truncate forward history
     historyRef.current = historyRef.current.slice(0, indexRef.current + 1);
     historyRef.current.push(json);
