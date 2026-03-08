@@ -78,11 +78,20 @@ export default function EditorPage() {
         v: () => setActiveTool("Select"),
         m: () => setActiveTool("Move"),
         h: () => setActiveTool("Pan"),
+        z: () => setActiveTool("Zoom"),
+        c: () => setActiveTool("Crop"),
         t: () => setActiveTool("Text"),
         r: () => setActiveTool("Rectangle"),
         e: () => setActiveTool("Ellipse"),
         b: () => setActiveTool("Brush"),
+        p: () => setActiveTool("Pen"),
         x: () => setActiveTool("Eraser"),
+        i: () => setActiveTool("Color Picker"),
+        w: () => setActiveTool("Magic Select"),
+        l: () => setActiveTool("Cut Out"),
+        a: () => setActiveTool("AI Enhance"),
+        g: () => setActiveTool("AI Generate"),
+        k: () => setActiveTool("AI Layers"),
       };
 
       if (!e.metaKey && !e.ctrlKey && shortcuts[e.key.toLowerCase()]) {
