@@ -71,13 +71,13 @@ export default function EditorPage() {
 
       // Ctrl/Cmd shortcuts always work (even from inputs)
       if (e.metaKey || e.ctrlKey) {
-        if (e.key === "z") {
+        if (e.key.toLowerCase() === "z") {
           e.preventDefault();
           if (e.shiftKey) redo();
           else undo();
           return;
         }
-        if (e.key === "s") {
+        if (e.key.toLowerCase() === "s") {
           e.preventDefault();
           saveProject();
           return;
