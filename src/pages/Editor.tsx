@@ -221,6 +221,10 @@ export default function EditorPage() {
             onBrushColorChange={setBrushColor}
             onBrushSizeChange={setBrushSize}
             pickedColor={pickedColor}
+            selectedLayerId={selectedLayerId}
+            onFillChange={setSelectedFill}
+            onStrokeChange={setSelectedStroke}
+            getSelectedObjectProps={getSelectedObjectProps}
           />
           <div className="flex-1 flex overflow-hidden relative">
             <FabricCanvas
