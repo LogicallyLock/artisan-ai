@@ -41,6 +41,41 @@ export type Database = {
         }
         Relationships: []
       }
+      project_collaborators: {
+        Row: {
+          created_at: string
+          id: string
+          invited_email: string | null
+          project_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          invited_email?: string | null
+          project_id: string
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          invited_email?: string | null
+          project_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_collaborators_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           canvas_data: Json | null
@@ -85,6 +120,48 @@ export type Database = {
           type?: string
           updated_at?: string
           user_id?: string
+          width?: number | null
+        }
+        Relationships: []
+      }
+      templates: {
+        Row: {
+          canvas_data: Json | null
+          category: string
+          created_at: string
+          description: string | null
+          height: number | null
+          id: string
+          layers_data: Json | null
+          name: string
+          thumbnail_url: string | null
+          type: string
+          width: number | null
+        }
+        Insert: {
+          canvas_data?: Json | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          height?: number | null
+          id?: string
+          layers_data?: Json | null
+          name: string
+          thumbnail_url?: string | null
+          type?: string
+          width?: number | null
+        }
+        Update: {
+          canvas_data?: Json | null
+          category?: string
+          created_at?: string
+          description?: string | null
+          height?: number | null
+          id?: string
+          layers_data?: Json | null
+          name?: string
+          thumbnail_url?: string | null
+          type?: string
           width?: number | null
         }
         Relationships: []
