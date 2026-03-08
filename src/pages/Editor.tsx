@@ -8,6 +8,7 @@ import { FabricCanvas } from "@/components/studio/FabricCanvas";
 import { InteractiveLayersPanel } from "@/components/studio/InteractiveLayersPanel";
 import { TimelinePanel } from "@/components/studio/TimelinePanel";
 import { AIPromptBar } from "@/components/studio/AIPromptBar";
+import { ToolOptionsBar } from "@/components/studio/ToolOptionsBar";
 import { ExportDialog } from "@/components/studio/ExportDialog";
 import { ShareDialog } from "@/components/studio/ShareDialog";
 import { useRealtimeCollaboration, CollaboratorAvatars } from "@/components/studio/RealtimeCollaboration";
@@ -42,6 +43,11 @@ export default function EditorPage() {
     toggleLayerLock,
     setLayerOpacity,
     exportCanvasAsDataUrl,
+    brushColor,
+    setBrushColor,
+    brushSize,
+    setBrushSize,
+    pickedColor,
   } = useFabricCanvas();
 
   const { onlineUsers } = useRealtimeCollaboration(projectId);
@@ -193,6 +199,14 @@ export default function EditorPage() {
         />
 
         <div className="flex-1 flex flex-col overflow-hidden relative">
+          <ToolOptionsBar
+            activeTool={activeTool}
+            brushColor={brushColor}
+            brushSize={brushSize}
+            onBrushColorChange={setBrushColor}
+            onBrushSizeChange={setBrushSize}
+            pickedColor={pickedColor}
+          />
           <div className="flex-1 flex overflow-hidden relative">
             <FabricCanvas
               onInit={initCanvas}
