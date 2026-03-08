@@ -67,7 +67,12 @@ export default function EditorPage() {
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      // Allow Ctrl/Cmd shortcuts even from inputs, but block single-key shortcuts
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+      const isFabricTextarea = isInput && (e.target as HTMLElement).classList?.contains('upper-canvas') === false 
+        && (e.target as HTMLElement).closest('.canvas-container') !== null;
+      
+      if (isInput && !isFabricTextarea && !(e.metaKey || e.ctrlKey)) return;
       
       if (e.key === "Delete" || e.key === "Backspace") {
         deleteSelected();
