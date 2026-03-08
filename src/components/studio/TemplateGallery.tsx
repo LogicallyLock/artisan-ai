@@ -163,20 +163,23 @@ export function TemplateGallery({ open, onClose }: TemplateGalleryProps) {
                   >
                     {/* Preview */}
                     <div className="h-24 bg-muted flex items-center justify-center relative">
-                      <div
-                        className="border border-border/50 bg-background/50"
-                        style={{
-                          width: Math.min(80, t.width / (t.height / 50)),
-                          height: Math.min(60, t.height / (t.width / 70)),
-                        }}
-                      />
-                      <div className="absolute top-2 right-2">
+                      <div className="flex flex-col items-center gap-1.5">
                         {t.type === "video" ? (
-                          <Film className="w-3.5 h-3.5 text-muted-foreground" />
+                          <Film className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                         ) : (
-                          <Image className="w-3.5 h-3.5 text-muted-foreground" />
+                          <Image className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
                         )}
+                        <div
+                          className="border-2 border-border/60 bg-background/60 rounded-sm"
+                          style={{
+                            width: Math.min(60, t.width / (t.height / 40)),
+                            height: Math.min(45, t.height / (t.width / 55)),
+                          }}
+                        />
                       </div>
+                      <span className="absolute top-2 right-2 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
+                        {t.category}
+                      </span>
                     </div>
                     <div className="p-3">
                       <p className="text-xs font-medium text-foreground truncate">{t.name}</p>
