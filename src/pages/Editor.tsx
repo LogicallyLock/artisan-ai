@@ -67,19 +67,9 @@ export default function EditorPage() {
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      // Allow Ctrl/Cmd shortcuts even from inputs, but block single-key shortcuts
       const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
-      const isFabricTextarea = isInput && (e.target as HTMLElement).classList?.contains('upper-canvas') === false 
-        && (e.target as HTMLElement).closest('.canvas-container') !== null;
-      
-      if (isInput && !isFabricTextarea && !(e.metaKey || e.ctrlKey)) return;
-      
-      if (e.key === "Delete" || e.key === "Backspace") {
-        deleteSelected();
-        return;
-      }
 
-      // Ctrl/Cmd shortcuts first
+      // Ctrl/Cmd shortcuts always work (even from inputs)
       if (e.metaKey || e.ctrlKey) {
         if (e.key === "z") {
           e.preventDefault();
@@ -92,6 +82,14 @@ export default function EditorPage() {
           saveProject();
           return;
         }
+        return;
+      }
+
+      // Block single-key shortcuts when typing in real inputs (not fabric's hidden textarea)
+      if (isInput) return;
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        deleteSelected();
         return;
       }
 
