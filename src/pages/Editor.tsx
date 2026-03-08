@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +9,9 @@ import { LayersPanel } from "@/components/studio/LayersPanel";
 import { PropertiesPanel } from "@/components/studio/PropertiesPanel";
 import { TimelinePanel } from "@/components/studio/TimelinePanel";
 import { AIPromptBar } from "@/components/studio/AIPromptBar";
+import { FiltersPanel, FilterState, DEFAULT_FILTERS } from "@/components/studio/FiltersPanel";
+import { ExportDialog } from "@/components/studio/ExportDialog";
+import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { toast } from "sonner";
 
 export default function EditorPage() {
@@ -18,12 +21,31 @@ export default function EditorPage() {
   const [mode, setMode] = useState<"image" | "video">("image");
   const [projectName, setProjectName] = useState("Untitled Project");
   const [loading, setLoading] = useState(true);
-  const [canvasImageUrl, setCanvasImageUrl] = useState<string | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
+
+  const { current: canvasImageUrl, push: pushImage, undo, redo, canUndo, canRedo } = useUndoRedo<string | null>(null);
 
   useEffect(() => {
     if (!projectId) return;
     loadProject();
   }, [projectId]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) { redo(); } else { undo(); }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === "y") {
+        e.preventDefault();
+        redo();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [undo, redo]);
 
   const loadProject = async () => {
     const { data, error } = await supabase
@@ -40,19 +62,19 @@ export default function EditorPage() {
 
     setProjectName(data.name);
     setMode(data.type as "image" | "video");
-    // Restore canvas image from saved data
     const canvasData = data.canvas_data as any;
     if (canvasData?.imageUrl) {
-      setCanvasImageUrl(canvasData.imageUrl);
+      pushImage(canvasData.imageUrl);
+    }
+    if (canvasData?.filters) {
+      setFilters({ ...DEFAULT_FILTERS, ...canvasData.filters });
     }
     setLoading(false);
   };
 
   const handleImageUpload = async (localUrl: string) => {
-    // For local preview
-    setCanvasImageUrl(localUrl);
+    pushImage(localUrl);
 
-    // Upload to storage if user is authenticated
     if (user && projectId) {
       try {
         const response = await fetch(localUrl);
@@ -64,16 +86,13 @@ export default function EditorPage() {
           .from("project-media")
           .upload(filePath, blob, { upsert: true });
 
-        if (error) {
-          console.error("Upload error:", error);
-          return;
-        }
+        if (error) { console.error("Upload error:", error); return; }
 
         const { data: urlData } = supabase.storage
           .from("project-media")
           .getPublicUrl(filePath);
 
-        setCanvasImageUrl(urlData.publicUrl);
+        pushImage(urlData.publicUrl);
         toast.success("Image imported!");
       } catch (err) {
         console.error("Upload failed:", err);
@@ -81,8 +100,8 @@ export default function EditorPage() {
     }
   };
 
-  const handleAIResult = (imageUrl: string, description: string) => {
-    setCanvasImageUrl(imageUrl);
+  const handleAIResult = (imageUrl: string) => {
+    pushImage(imageUrl);
   };
 
   const saveProject = useCallback(async () => {
@@ -92,17 +111,14 @@ export default function EditorPage() {
       .update({
         name: projectName,
         type: mode,
-        canvas_data: { imageUrl: canvasImageUrl },
+        canvas_data: { imageUrl: canvasImageUrl, filters: filters as unknown as Record<string, number> },
         layers_data: [],
       })
       .eq("id", projectId);
 
-    if (error) {
-      toast.error("Failed to save");
-    } else {
-      toast.success("Project saved!");
-    }
-  }, [projectId, projectName, mode, canvasImageUrl]);
+    if (error) { toast.error("Failed to save"); }
+    else { toast.success("Project saved!"); }
+  }, [projectId, projectName, mode, canvasImageUrl, filters]);
 
   if (loading) {
     return (
@@ -121,6 +137,11 @@ export default function EditorPage() {
         onProjectNameChange={setProjectName}
         onSave={saveProject}
         onBack={() => navigate("/dashboard")}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onExport={() => setExportOpen(true)}
       />
 
       <div className="flex-1 flex overflow-hidden relative">
@@ -131,6 +152,7 @@ export default function EditorPage() {
             <CanvasArea
               canvasImageUrl={canvasImageUrl}
               onImageUpload={handleImageUpload}
+              filters={filters}
             />
             <AIPromptBar
               currentImageUrl={canvasImageUrl}
@@ -140,9 +162,18 @@ export default function EditorPage() {
           {mode === "video" && <TimelinePanel />}
         </div>
 
-        <LayersPanel />
+        <div className="flex flex-col border-l border-border">
+          <FiltersPanel filters={filters} onFiltersChange={setFilters} />
+        </div>
         <PropertiesPanel />
       </div>
+
+      <ExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        imageUrl={canvasImageUrl}
+        mode={mode}
+      />
     </div>
   );
 }
