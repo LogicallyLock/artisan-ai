@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import LandingPage from "./pages/Landing";
 import AuthPage from "./pages/Auth";
+import ResetPasswordPage from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import EditorPage from "./pages/Editor";
 import NotFound from "./pages/NotFound";
@@ -35,6 +36,7 @@ const App = () => (
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/auth" element={<AuthPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/editor/:projectId" element={<ProtectedRoute><EditorPage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
