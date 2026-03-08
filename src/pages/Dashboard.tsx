@@ -95,6 +95,13 @@ export default function Dashboard() {
             <span>{user?.user_metadata?.full_name || user?.email}</span>
           </div>
           <button
+            onClick={() => navigate("/settings")}
+            className="studio-tool-btn w-8 h-8"
+            title="Profile settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
+          <button
             onClick={signOut}
             className="studio-tool-btn w-8 h-8"
             title="Sign out"
