@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Plus, Sparkles, Image, Film, Clock, Trash2,
-  LogOut, User, Search, MoreVertical, FolderOpen
+  LogOut, User, Search, Settings, FolderOpen
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
