@@ -11,6 +11,8 @@ import { TimelinePanel } from "@/components/studio/TimelinePanel";
 import { AIPromptBar } from "@/components/studio/AIPromptBar";
 import { FiltersPanel, FilterState, DEFAULT_FILTERS } from "@/components/studio/FiltersPanel";
 import { ExportDialog } from "@/components/studio/ExportDialog";
+import { ShareDialog } from "@/components/studio/ShareDialog";
+import { useRealtimeCollaboration, CollaboratorAvatars } from "@/components/studio/RealtimeCollaboration";
 import { useUndoRedo } from "@/hooks/useUndoRedo";
 import { toast } from "sonner";
 
@@ -22,16 +24,41 @@ export default function EditorPage() {
   const [projectName, setProjectName] = useState("Untitled Project");
   const [loading, setLoading] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS);
 
   const { current: canvasImageUrl, push: pushImage, undo, redo, canUndo, canRedo } = useUndoRedo<string | null>(null);
+  const { onlineUsers } = useRealtimeCollaboration(projectId);
+
+  // Listen for realtime project updates from collaborators
+  useEffect(() => {
+    if (!projectId) return;
+    const channel = supabase
+      .channel(`project-sync:${projectId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "projects", filter: `id=eq.${projectId}` },
+        (payload) => {
+          const updated = payload.new as any;
+          // Only apply changes from other users
+          if (updated.canvas_data?.imageUrl && updated.canvas_data.imageUrl !== canvasImageUrl) {
+            pushImage(updated.canvas_data.imageUrl);
+          }
+          if (updated.name !== projectName) {
+            setProjectName(updated.name);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [projectId]);
 
   useEffect(() => {
     if (!projectId) return;
     loadProject();
   }, [projectId]);
 
-  // Keyboard shortcuts for undo/redo
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "z") {
@@ -142,6 +169,8 @@ export default function EditorPage() {
         canUndo={canUndo}
         canRedo={canRedo}
         onExport={() => setExportOpen(true)}
+        onShare={() => setShareOpen(true)}
+        collaborators={<CollaboratorAvatars users={onlineUsers} />}
       />
 
       <div className="flex-1 flex overflow-hidden relative">
@@ -173,6 +202,12 @@ export default function EditorPage() {
         onClose={() => setExportOpen(false)}
         imageUrl={canvasImageUrl}
         mode={mode}
+      />
+      <ShareDialog
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        projectId={projectId || ""}
+        projectName={projectName}
       />
     </div>
   );

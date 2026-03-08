@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { Save, Download, Undo2, Redo2, Share2, ArrowLeft, Image, Film, Sparkles } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -13,9 +14,11 @@ interface TopMenuBarProps {
   canUndo?: boolean;
   canRedo?: boolean;
   onExport?: () => void;
+  onShare?: () => void;
+  collaborators?: ReactNode;
 }
 
-export function TopMenuBar({ mode, onModeChange, projectName, onProjectNameChange, onSave, onBack, onUndo, onRedo, canUndo, canRedo, onExport }: TopMenuBarProps) {
+export function TopMenuBar({ mode, onModeChange, projectName, onProjectNameChange, onSave, onBack, onUndo, onRedo, canUndo, canRedo, onExport, onShare, collaborators }: TopMenuBarProps) {
   return (
     <div className="h-10 studio-toolbar border-b border-border flex items-center px-3 gap-1">
       {onBack && (
@@ -68,6 +71,9 @@ export function TopMenuBar({ mode, onModeChange, projectName, onProjectNameChang
 
       <div className="flex-1" />
 
+      {/* Online collaborators */}
+      {collaborators && <div className="mr-3">{collaborators}</div>}
+
       <div className="flex items-center gap-0.5">
         <Tooltip delayDuration={200}>
           <TooltipTrigger asChild>
@@ -89,7 +95,7 @@ export function TopMenuBar({ mode, onModeChange, projectName, onProjectNameChang
         {onSave && (
           <button onClick={onSave} className="studio-tool-btn w-8 h-8"><Save className="w-4 h-4" /></button>
         )}
-        <button className="studio-tool-btn w-8 h-8"><Share2 className="w-4 h-4" /></button>
+        <button onClick={onShare} className="studio-tool-btn w-8 h-8"><Share2 className="w-4 h-4" /></button>
         <button
           onClick={onExport}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-medium hover:bg-primary/90 transition-colors"

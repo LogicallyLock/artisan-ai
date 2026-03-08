@@ -4,11 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Plus, Sparkles, Image, Film, Clock, Trash2,
-  LogOut, User, Search, Settings, FolderOpen
+  LogOut, User, Search, Settings, FolderOpen, LayoutGrid
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { TemplateGallery } from "@/components/studio/TemplateGallery";
 
 interface Project {
   id: string;
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false);
 
   useEffect(() => {
     fetchProjects();
@@ -149,14 +151,27 @@ export default function Dashboard() {
           <button
             onClick={() => createProject("video")}
             disabled={creating}
-            className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed border-border hover:border-studio-blue/50 bg-card/50 hover:bg-card transition-all"
+            className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed border-border hover:border-accent/50 bg-card/50 hover:bg-card transition-all"
           >
-            <div className="w-12 h-12 rounded-xl bg-studio-blue/10 flex items-center justify-center group-hover:bg-studio-blue/20 transition-colors">
-              <Film className="w-6 h-6 text-studio-blue" />
+            <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center group-hover:bg-accent/20 transition-colors">
+              <Film className="w-6 h-6 text-accent" />
             </div>
             <div className="text-center">
               <p className="text-sm font-medium text-foreground">New Video</p>
               <p className="text-xs text-muted-foreground">Video editor</p>
+            </div>
+          </button>
+
+          <button
+            onClick={() => setTemplateGalleryOpen(true)}
+            className="group flex flex-col items-center justify-center gap-3 p-6 rounded-2xl border-2 border-dashed border-border hover:border-primary/50 bg-card/50 hover:bg-card transition-all"
+          >
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+              <LayoutGrid className="w-6 h-6 text-primary" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-foreground">From Template</p>
+              <p className="text-xs text-muted-foreground">Browse gallery</p>
             </div>
           </button>
         </div>
@@ -218,6 +233,11 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      <TemplateGallery
+        open={templateGalleryOpen}
+        onClose={() => setTemplateGalleryOpen(false)}
+      />
     </div>
   );
 }
