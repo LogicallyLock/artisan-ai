@@ -72,6 +72,7 @@ export function useFabricCanvas() {
   const [pickedColor, setPickedColor] = useState<string | null>(null);
   const layerCountRef = useRef(0);
   const isPanningRef = useRef(false);
+  const history = useCanvasHistory();
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
   const isDrawingShapeRef = useRef(false);
   const shapeStartRef = useRef<{ x: number; y: number } | null>(null);
