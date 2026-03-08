@@ -1,4 +1,26 @@
 import { Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
+
+const productLinks = [
+  { label: "Photo Editor", href: "/auth" },
+  { label: "Video Editor", href: "/auth" },
+  { label: "AI Features", href: "/#features" },
+  { label: "Pricing", href: "/#pricing" },
+];
+
+const resourceLinks = [
+  { label: "Tutorials", href: "/tutorials" },
+  { label: "Blog", href: "/blog" },
+  { label: "Community", href: "/community" },
+  { label: "API Docs", href: "/api-docs" },
+];
+
+const companyLinks = [
+  { label: "About", href: "/about" },
+  { label: "Careers", href: "/careers" },
+  { label: "Privacy", href: "/privacy" },
+  { label: "Terms", href: "/terms" },
+];
 
 export function Footer() {
   return (
@@ -18,9 +40,9 @@ export function Footer() {
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Product</h4>
             <ul className="space-y-2 text-sm">
-              {["Photo Editor", "Video Editor", "AI Features", "Pricing"].map((link) => (
-                <li key={link}>
-                  <a href="#" className="text-secondary-foreground hover:text-foreground transition-colors">{link}</a>
+              {productLinks.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href} className="text-secondary-foreground hover:text-foreground transition-colors">{link.label}</Link>
                 </li>
               ))}
             </ul>
@@ -29,9 +51,9 @@ export function Footer() {
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Resources</h4>
             <ul className="space-y-2 text-sm">
-              {["Tutorials", "Blog", "Community", "API Docs"].map((link) => (
-                <li key={link}>
-                  <a href="#" className="text-secondary-foreground hover:text-foreground transition-colors">{link}</a>
+              {resourceLinks.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href} className="text-secondary-foreground hover:text-foreground transition-colors">{link.label}</Link>
                 </li>
               ))}
             </ul>
@@ -40,9 +62,9 @@ export function Footer() {
           <div>
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-4">Company</h4>
             <ul className="space-y-2 text-sm">
-              {["About", "Careers", "Privacy", "Terms"].map((link) => (
-                <li key={link}>
-                  <a href="#" className="text-secondary-foreground hover:text-foreground transition-colors">{link}</a>
+              {companyLinks.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.href} className="text-secondary-foreground hover:text-foreground transition-colors">{link.label}</Link>
                 </li>
               ))}
             </ul>

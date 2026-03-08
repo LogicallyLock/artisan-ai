@@ -10,6 +10,14 @@ import ResetPasswordPage from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import EditorPage from "./pages/Editor";
 import ProfileSettings from "./pages/ProfileSettings";
+import TutorialsPage from "./pages/Tutorials";
+import BlogPage from "./pages/Blog";
+import CommunityPage from "./pages/Community";
+import ApiDocsPage from "./pages/ApiDocs";
+import AboutPage from "./pages/About";
+import CareersPage from "./pages/Careers";
+import PrivacyPage from "./pages/Privacy";
+import TermsPage from "./pages/Terms";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -41,6 +49,14 @@ const App = () => (
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><ProfileSettings /></ProtectedRoute>} />
             <Route path="/editor/:projectId" element={<ProtectedRoute><EditorPage /></ProtectedRoute>} />
+            <Route path="/tutorials" element={<TutorialsPage />} />
+            <Route path="/blog" element={<BlogPage />} />
+            <Route path="/community" element={<CommunityPage />} />
+            <Route path="/api-docs" element={<ApiDocsPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/careers" element={<CareersPage />} />
+            <Route path="/privacy" element={<PrivacyPage />} />
+            <Route path="/terms" element={<TermsPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
