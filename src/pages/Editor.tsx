@@ -74,6 +74,22 @@ export default function EditorPage() {
         return;
       }
 
+      // Ctrl/Cmd shortcuts first
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key === "z") {
+          e.preventDefault();
+          if (e.shiftKey) redo();
+          else undo();
+          return;
+        }
+        if (e.key === "s") {
+          e.preventDefault();
+          saveProject();
+          return;
+        }
+        return;
+      }
+
       const shortcuts: Record<string, () => void> = {
         v: () => setActiveTool("Select"),
         m: () => setActiveTool("Move"),
@@ -94,17 +110,9 @@ export default function EditorPage() {
         k: () => setActiveTool("AI Layers"),
       };
 
-      if (!e.metaKey && !e.ctrlKey && shortcuts[e.key.toLowerCase()]) {
+      if (shortcuts[e.key.toLowerCase()]) {
         e.preventDefault();
         shortcuts[e.key.toLowerCase()]();
-      }
-
-      // Ctrl+Z / Ctrl+Shift+Z for undo/redo
-      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
-        e.preventDefault();
-        if (e.shiftKey) redo();
-        else undo();
-        return;
       }
 
       // Ctrl+S to save
