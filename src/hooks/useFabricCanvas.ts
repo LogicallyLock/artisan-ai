@@ -1,6 +1,49 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import * as fabric from "fabric";
 
+// Undo/Redo history management
+function useCanvasHistory() {
+  const historyRef = useRef<string[]>([]);
+  const indexRef = useRef(-1);
+  const isRestoringRef = useRef(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const updateFlags = useCallback(() => {
+    setCanUndo(indexRef.current > 0);
+    setCanRedo(indexRef.current < historyRef.current.length - 1);
+  }, []);
+
+  const saveState = useCallback((canvas: fabric.Canvas) => {
+    if (isRestoringRef.current) return;
+    const json = JSON.stringify(canvas.toJSON(["__layerId"]));
+    // Truncate forward history
+    historyRef.current = historyRef.current.slice(0, indexRef.current + 1);
+    historyRef.current.push(json);
+    // Cap at 50 entries
+    if (historyRef.current.length > 50) {
+      historyRef.current.shift();
+    } else {
+      indexRef.current++;
+    }
+    updateFlags();
+  }, [updateFlags]);
+
+  const restore = useCallback(async (canvas: fabric.Canvas, direction: "undo" | "redo") => {
+    const newIndex = direction === "undo" ? indexRef.current - 1 : indexRef.current + 1;
+    if (newIndex < 0 || newIndex >= historyRef.current.length) return;
+    indexRef.current = newIndex;
+    isRestoringRef.current = true;
+    const json = historyRef.current[newIndex];
+    await canvas.loadFromJSON(json);
+    canvas.requestRenderAll();
+    isRestoringRef.current = false;
+    updateFlags();
+  }, [updateFlags]);
+
+  return { saveState, restore, isRestoringRef, canUndo, canRedo };
+}
+
 export interface CanvasLayer {
   id: string;
   name: string;
