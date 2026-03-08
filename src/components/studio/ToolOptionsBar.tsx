@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Slider } from "@/components/ui/slider";
 import type { ToolType } from "@/hooks/useFabricCanvas";
 
@@ -8,6 +9,10 @@ interface ToolOptionsBarProps {
   onBrushColorChange: (color: string) => void;
   onBrushSizeChange: (size: number) => void;
   pickedColor: string | null;
+  selectedLayerId: string | null;
+  onFillChange: (color: string) => void;
+  onStrokeChange: (color: string) => void;
+  getSelectedObjectProps: () => { fill: string | null; stroke: string | null } | null;
 }
 
 const presetColors = [
@@ -22,6 +27,10 @@ export function ToolOptionsBar({
   onBrushColorChange,
   onBrushSizeChange,
   pickedColor,
+  selectedLayerId,
+  onFillChange,
+  onStrokeChange,
+  getSelectedObjectProps,
 }: ToolOptionsBarProps) {
   const showBrushOptions = ["Brush", "Pen", "Eraser"].includes(activeTool);
   const showColorPicker = activeTool === "Color Picker";
@@ -30,12 +39,65 @@ export function ToolOptionsBar({
   const showZoomHint = activeTool === "Zoom";
   const showAIHint = ["AI Enhance", "AI Generate", "AI Layers", "Magic Select", "Cut Out"].includes(activeTool);
 
-  if (!showBrushOptions && !showColorPicker && !showShapeHint && !showCropHint && !showZoomHint && !showAIHint) {
+  // Get fill/stroke for selected object
+  const [fillColor, setFillColor] = useState<string>("#8b5cf6");
+  const [strokeColor, setStrokeColor] = useState<string>("#8b5cf6");
+
+  useEffect(() => {
+    const props = getSelectedObjectProps();
+    if (props) {
+      if (props.fill) setFillColor(props.fill);
+      if (props.stroke) setStrokeColor(props.stroke);
+    }
+  }, [selectedLayerId, getSelectedObjectProps]);
+
+  const showObjectProps = activeTool === "Select" && selectedLayerId;
+
+  if (!showBrushOptions && !showColorPicker && !showShapeHint && !showCropHint && !showZoomHint && !showAIHint && !showObjectProps) {
     return null;
   }
 
   return (
     <div className="h-9 studio-toolbar border-b border-border flex items-center px-3 gap-3 text-xs text-muted-foreground">
+      {showObjectProps && (
+        <>
+          <span className="text-foreground font-medium">Selection</span>
+          <div className="w-px h-4 bg-border" />
+          <span>Fill</span>
+          <div className="flex items-center gap-1">
+            <input
+              type="color"
+              value={fillColor}
+              onChange={(e) => { setFillColor(e.target.value); onFillChange(e.target.value); }}
+              className="w-6 h-6 rounded cursor-pointer border border-border"
+            />
+            <span className="font-mono w-16">{fillColor}</span>
+          </div>
+          <div className="w-px h-4 bg-border" />
+          <span>Stroke</span>
+          <div className="flex items-center gap-1">
+            <input
+              type="color"
+              value={strokeColor}
+              onChange={(e) => { setStrokeColor(e.target.value); onStrokeChange(e.target.value); }}
+              className="w-6 h-6 rounded cursor-pointer border border-border"
+            />
+            <span className="font-mono w-16">{strokeColor}</span>
+          </div>
+          <div className="w-px h-4 bg-border" />
+          <div className="flex gap-1">
+            {presetColors.slice(0, 6).map((c) => (
+              <button
+                key={c}
+                onClick={() => { setFillColor(c); onFillChange(c); }}
+                className="w-4 h-4 rounded-full border border-border hover:scale-125 transition-transform"
+                style={{ backgroundColor: c }}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
       {showBrushOptions && (
         <>
           <span className="text-foreground font-medium">{activeTool}</span>

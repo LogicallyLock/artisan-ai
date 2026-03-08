@@ -48,6 +48,13 @@ export default function EditorPage() {
     brushSize,
     setBrushSize,
     pickedColor,
+    undo,
+    redo,
+    canUndo,
+    canRedo,
+    setSelectedFill,
+    setSelectedStroke,
+    getSelectedObjectProps,
   } = useFabricCanvas();
 
   const { onlineUsers } = useRealtimeCollaboration(projectId);
@@ -83,6 +90,14 @@ export default function EditorPage() {
         shortcuts[e.key.toLowerCase()]();
       }
 
+      // Ctrl+Z / Ctrl+Shift+Z for undo/redo
+      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+
       // Ctrl+S to save
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -91,7 +106,7 @@ export default function EditorPage() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [deleteSelected, setActiveTool]);
+  }, [deleteSelected, setActiveTool, undo, redo]);
 
   const loadProject = async () => {
     const { data, error } = await supabase
@@ -182,10 +197,10 @@ export default function EditorPage() {
         onProjectNameChange={setProjectName}
         onSave={saveProject}
         onBack={() => navigate("/dashboard")}
-        onUndo={() => {}}
-        onRedo={() => {}}
-        canUndo={false}
-        canRedo={false}
+        onUndo={undo}
+        onRedo={redo}
+        canUndo={canUndo}
+        canRedo={canRedo}
         onExport={() => setExportOpen(true)}
         onShare={() => setShareOpen(true)}
         collaborators={<CollaboratorAvatars users={onlineUsers} />}
@@ -206,6 +221,10 @@ export default function EditorPage() {
             onBrushColorChange={setBrushColor}
             onBrushSizeChange={setBrushSize}
             pickedColor={pickedColor}
+            selectedLayerId={selectedLayerId}
+            onFillChange={setSelectedFill}
+            onStrokeChange={setSelectedStroke}
+            getSelectedObjectProps={getSelectedObjectProps}
           />
           <div className="flex-1 flex overflow-hidden relative">
             <FabricCanvas

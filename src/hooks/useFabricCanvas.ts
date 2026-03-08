@@ -1,6 +1,49 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import * as fabric from "fabric";
 
+// Undo/Redo history management
+function useCanvasHistory() {
+  const historyRef = useRef<string[]>([]);
+  const indexRef = useRef(-1);
+  const isRestoringRef = useRef(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const updateFlags = useCallback(() => {
+    setCanUndo(indexRef.current > 0);
+    setCanRedo(indexRef.current < historyRef.current.length - 1);
+  }, []);
+
+  const saveState = useCallback((canvas: fabric.Canvas) => {
+    if (isRestoringRef.current) return;
+    const json = JSON.stringify(canvas.toJSON());
+    // Truncate forward history
+    historyRef.current = historyRef.current.slice(0, indexRef.current + 1);
+    historyRef.current.push(json);
+    // Cap at 50 entries
+    if (historyRef.current.length > 50) {
+      historyRef.current.shift();
+    } else {
+      indexRef.current++;
+    }
+    updateFlags();
+  }, [updateFlags]);
+
+  const restore = useCallback(async (canvas: fabric.Canvas, direction: "undo" | "redo") => {
+    const newIndex = direction === "undo" ? indexRef.current - 1 : indexRef.current + 1;
+    if (newIndex < 0 || newIndex >= historyRef.current.length) return;
+    indexRef.current = newIndex;
+    isRestoringRef.current = true;
+    const json = historyRef.current[newIndex];
+    await canvas.loadFromJSON(json);
+    canvas.requestRenderAll();
+    isRestoringRef.current = false;
+    updateFlags();
+  }, [updateFlags]);
+
+  return { saveState, restore, isRestoringRef, canUndo, canRedo };
+}
+
 export interface CanvasLayer {
   id: string;
   name: string;
@@ -29,6 +72,7 @@ export function useFabricCanvas() {
   const [pickedColor, setPickedColor] = useState<string | null>(null);
   const layerCountRef = useRef(0);
   const isPanningRef = useRef(false);
+  const history = useCanvasHistory();
   const lastPosRef = useRef<{ x: number; y: number } | null>(null);
   const isDrawingShapeRef = useRef(false);
   const shapeStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -315,6 +359,14 @@ export function useFabricCanvas() {
         addLayerForObject(path, name, "drawing");
       }
     });
+
+    // Save history on every object modification
+    const saveHistory = () => history.saveState(canvas);
+    canvas.on("object:added", saveHistory);
+    canvas.on("object:modified", saveHistory);
+    canvas.on("object:removed", saveHistory);
+    // Save initial state
+    history.saveState(canvas);
 
     return canvas;
   }, []);
@@ -731,6 +783,67 @@ export function useFabricCanvas() {
     return canvas.toDataURL({ format: "png", multiplier: 2 });
   }, []);
 
+  const undo = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (canvas) history.restore(canvas, "undo").then(() => syncLayersFromCanvas());
+  }, []);
+
+  const redo = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (canvas) history.restore(canvas, "redo").then(() => syncLayersFromCanvas());
+  }, []);
+
+  // Rebuild layers state from canvas objects after undo/redo
+  const syncLayersFromCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const objects = canvas.getObjects();
+    const newLayers: CanvasLayer[] = objects
+      .filter((obj) => (obj as any).__layerId)
+      .map((obj) => ({
+        id: (obj as any).__layerId,
+        name: (obj as any).__layerId || "Layer",
+        type: "shape" as CanvasLayer["type"],
+        visible: obj.visible !== false,
+        locked: !obj.selectable,
+        opacity: Math.round((obj.opacity ?? 1) * 100),
+        fabricObject: obj,
+      }))
+      .reverse();
+    setLayers(newLayers);
+  }, []);
+
+  const setSelectedFill = useCallback((color: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const active = canvas.getActiveObject();
+    if (active) {
+      active.set("fill", color);
+      canvas.requestRenderAll();
+    }
+  }, []);
+
+  const setSelectedStroke = useCallback((color: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const active = canvas.getActiveObject();
+    if (active) {
+      active.set("stroke", color);
+      canvas.requestRenderAll();
+    }
+  }, []);
+
+  const getSelectedObjectProps = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const active = canvas.getActiveObject();
+    if (!active) return null;
+    return {
+      fill: typeof active.fill === "string" ? active.fill : null,
+      stroke: typeof active.stroke === "string" ? active.stroke : null,
+    };
+  }, []);
+
   return {
     canvasRef,
     containerRef,
@@ -760,5 +873,12 @@ export function useFabricCanvas() {
     setBrushSize,
     pickedColor,
     exportCanvasAsDataUrl,
+    undo,
+    redo,
+    canUndo: history.canUndo,
+    canRedo: history.canRedo,
+    setSelectedFill,
+    setSelectedStroke,
+    getSelectedObjectProps,
   };
 }
