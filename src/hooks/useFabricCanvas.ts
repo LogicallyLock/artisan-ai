@@ -873,5 +873,12 @@ export function useFabricCanvas() {
     setBrushSize,
     pickedColor,
     exportCanvasAsDataUrl,
+    undo,
+    redo,
+    canUndo: history.canUndo,
+    canRedo: history.canRedo,
+    setSelectedFill,
+    setSelectedStroke,
+    getSelectedObjectProps,
   };
 }
