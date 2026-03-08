@@ -2,9 +2,26 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { X, Sparkles, ImageIcon, Film, Search, LayoutGrid } from "lucide-react";
+import { X, Film, Search, LayoutGrid } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+
+// Template thumbnail imports
+import instagramPostThumb from "@/assets/templates/instagram-post.jpg";
+import instagramStoryThumb from "@/assets/templates/instagram-story.jpg";
+import facebookCoverThumb from "@/assets/templates/facebook-cover.jpg";
+import youtubeThumbnailThumb from "@/assets/templates/youtube-thumbnail.jpg";
+import twitterBannerThumb from "@/assets/templates/twitter-banner.jpg";
+import logoDesignThumb from "@/assets/templates/logo-design.jpg";
+import posterThumb from "@/assets/templates/poster.jpg";
+import businessCardThumb from "@/assets/templates/business-card.jpg";
+import presentationThumb from "@/assets/templates/presentation.jpg";
+import flyerThumb from "@/assets/templates/flyer.jpg";
+import photoCollageThumb from "@/assets/templates/photo-collage.jpg";
+import videoIntroThumb from "@/assets/templates/video-intro.jpg";
+import socialReelThumb from "@/assets/templates/social-reel.jpg";
+import bannerAdThumb from "@/assets/templates/banner-ad.jpg";
+import albumArtThumb from "@/assets/templates/album-art.jpg";
 
 interface Template {
   id: string;
@@ -27,6 +44,24 @@ const CATEGORY_ICONS: Record<string, string> = {
   creative: "🎨",
   print: "🖨️",
   video: "🎬",
+};
+
+const THUMBNAIL_MAP: Record<string, string> = {
+  "Instagram Post": instagramPostThumb,
+  "Instagram Story": instagramStoryThumb,
+  "Facebook Cover": facebookCoverThumb,
+  "YouTube Thumbnail": youtubeThumbnailThumb,
+  "Twitter/X Banner": twitterBannerThumb,
+  "Logo Design": logoDesignThumb,
+  "Poster": posterThumb,
+  "Business Card": businessCardThumb,
+  "Presentation": presentationThumb,
+  "Flyer": flyerThumb,
+  "Photo Collage": photoCollageThumb,
+  "Video Intro": videoIntroThumb,
+  "Social Reel": socialReelThumb,
+  "Banner Ad": bannerAdThumb,
+  "Album Art": albumArtThumb,
 };
 
 interface TemplateGalleryProps {
@@ -87,6 +122,10 @@ export function TemplateGallery({ open, onClose }: TemplateGalleryProps) {
     const matchSearch = t.name.toLowerCase().includes(search.toLowerCase());
     return matchCat && matchSearch;
   });
+
+  const getThumbnail = (template: Template): string | null => {
+    return THUMBNAIL_MAP[template.name] || template.thumbnail_url || null;
+  };
 
   if (!open) return null;
 
@@ -151,40 +190,47 @@ export function TemplateGallery({ open, onClose }: TemplateGalleryProps) {
               <div className="text-center py-12 text-muted-foreground text-sm">No templates found</div>
             ) : (
               <div className="grid grid-cols-3 gap-3">
-                {filtered.map((t, i) => (
-                  <motion.button
-                    key={t.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.03 }}
-                    onClick={() => createFromTemplate(t)}
-                    disabled={creating}
-                    className="group text-left bg-secondary/50 hover:bg-secondary border border-border hover:border-primary/30 rounded-xl overflow-hidden transition-all disabled:opacity-50"
-                  >
-                    {/* Preview */}
-                    <div className="h-28 bg-muted/50 flex items-center justify-center relative">
-                      <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center group-hover:bg-primary/10 transition-colors">
-                        {t.type === "video" ? (
-                          <Film className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                {filtered.map((t, i) => {
+                  const thumb = getThumbnail(t);
+                  return (
+                    <motion.button
+                      key={t.id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: i * 0.03 }}
+                      onClick={() => createFromTemplate(t)}
+                      disabled={creating}
+                      className="group text-left bg-secondary/50 hover:bg-secondary border border-border hover:border-primary/30 rounded-xl overflow-hidden transition-all disabled:opacity-50"
+                    >
+                      {/* Preview thumbnail */}
+                      <div className="h-28 bg-muted/50 relative overflow-hidden">
+                        {thumb ? (
+                          <img
+                            src={thumb}
+                            alt={t.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
                         ) : (
-                          <ImageIcon className="w-6 h-6 text-muted-foreground group-hover:text-primary transition-colors" />
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Film className="w-6 h-6 text-muted-foreground" />
+                          </div>
+                        )}
+                        <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-background/80 backdrop-blur-sm text-[10px] text-foreground font-medium uppercase tracking-wider">
+                          {t.category}
+                        </span>
+                      </div>
+                      <div className="p-3">
+                        <p className="text-xs font-medium text-foreground truncate">{t.name}</p>
+                        <p className="text-[10px] text-muted-foreground mt-0.5">
+                          {t.width} × {t.height}px
+                        </p>
+                        {t.description && (
+                          <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{t.description}</p>
                         )}
                       </div>
-                      <span className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-secondary text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                        {t.category}
-                      </span>
-                    </div>
-                    <div className="p-3">
-                      <p className="text-xs font-medium text-foreground truncate">{t.name}</p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {t.width} × {t.height}px
-                      </p>
-                      {t.description && (
-                        <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">{t.description}</p>
-                      )}
-                    </div>
-                  </motion.button>
-                ))}
+                    </motion.button>
+                  );
+                })}
               </div>
             )}
           </div>
