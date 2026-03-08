@@ -16,7 +16,17 @@ function useCanvasHistory() {
 
   const saveState = useCallback((canvas: fabric.Canvas) => {
     if (isRestoringRef.current) return;
-    const json = JSON.stringify(canvas.toJSON());
+    const canvasJson = canvas.toJSON();
+    // Preserve custom __layerId on each object
+    const objects = canvas.getObjects();
+    if (canvasJson.objects) {
+      canvasJson.objects.forEach((objJson: any, i: number) => {
+        if (objects[i] && (objects[i] as any).__layerId) {
+          objJson.__layerId = (objects[i] as any).__layerId;
+        }
+      });
+    }
+    const json = JSON.stringify(canvasJson);
     // Truncate forward history
     historyRef.current = historyRef.current.slice(0, indexRef.current + 1);
     historyRef.current.push(json);
@@ -34,8 +44,18 @@ function useCanvasHistory() {
     if (newIndex < 0 || newIndex >= historyRef.current.length) return;
     indexRef.current = newIndex;
     isRestoringRef.current = true;
-    const json = historyRef.current[newIndex];
-    await canvas.loadFromJSON(json);
+    const jsonStr = historyRef.current[newIndex];
+    const parsed = JSON.parse(jsonStr);
+    // Extract custom __layerId before loading
+    const layerIds = (parsed.objects || []).map((o: any) => o.__layerId || null);
+    await canvas.loadFromJSON(parsed);
+    // Re-apply __layerId to restored objects
+    const objects = canvas.getObjects();
+    objects.forEach((obj, i) => {
+      if (layerIds[i]) {
+        (obj as any).__layerId = layerIds[i];
+      }
+    });
     canvas.requestRenderAll();
     isRestoringRef.current = false;
     updateFlags();

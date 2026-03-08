@@ -67,8 +67,27 @@ export default function EditorPage() {
   // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-      
+      const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
+
+      // Ctrl/Cmd shortcuts always work (even from inputs)
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key.toLowerCase() === "z") {
+          e.preventDefault();
+          if (e.shiftKey) redo();
+          else undo();
+          return;
+        }
+        if (e.key.toLowerCase() === "s") {
+          e.preventDefault();
+          saveProject();
+          return;
+        }
+        return;
+      }
+
+      // Block single-key shortcuts when typing in real inputs (not fabric's hidden textarea)
+      if (isInput) return;
+
       if (e.key === "Delete" || e.key === "Backspace") {
         deleteSelected();
         return;
@@ -78,24 +97,25 @@ export default function EditorPage() {
         v: () => setActiveTool("Select"),
         m: () => setActiveTool("Move"),
         h: () => setActiveTool("Pan"),
+        z: () => setActiveTool("Zoom"),
+        c: () => setActiveTool("Crop"),
         t: () => setActiveTool("Text"),
         r: () => setActiveTool("Rectangle"),
         e: () => setActiveTool("Ellipse"),
         b: () => setActiveTool("Brush"),
+        p: () => setActiveTool("Pen"),
         x: () => setActiveTool("Eraser"),
+        i: () => setActiveTool("Color Picker"),
+        w: () => setActiveTool("Magic Select"),
+        l: () => setActiveTool("Cut Out"),
+        a: () => setActiveTool("AI Enhance"),
+        g: () => setActiveTool("AI Generate"),
+        k: () => setActiveTool("AI Layers"),
       };
 
-      if (!e.metaKey && !e.ctrlKey && shortcuts[e.key.toLowerCase()]) {
+      if (shortcuts[e.key.toLowerCase()]) {
         e.preventDefault();
         shortcuts[e.key.toLowerCase()]();
-      }
-
-      // Ctrl+Z / Ctrl+Shift+Z for undo/redo
-      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
-        e.preventDefault();
-        if (e.shiftKey) redo();
-        else undo();
-        return;
       }
 
       // Ctrl+S to save
