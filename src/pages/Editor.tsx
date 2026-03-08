@@ -90,6 +90,14 @@ export default function EditorPage() {
         shortcuts[e.key.toLowerCase()]();
       }
 
+      // Ctrl+Z / Ctrl+Shift+Z for undo/redo
+      if ((e.metaKey || e.ctrlKey) && e.key === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+
       // Ctrl+S to save
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
@@ -98,7 +106,7 @@ export default function EditorPage() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [deleteSelected, setActiveTool]);
+  }, [deleteSelected, setActiveTool, undo, redo]);
 
   const loadProject = async () => {
     const { data, error } = await supabase
