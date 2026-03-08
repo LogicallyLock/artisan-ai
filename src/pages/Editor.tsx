@@ -111,7 +111,7 @@ export default function EditorPage() {
       .update({
         name: projectName,
         type: mode,
-        canvas_data: { imageUrl: canvasImageUrl, filters },
+        canvas_data: { imageUrl: canvasImageUrl, filters: filters as unknown as Record<string, number> },
         layers_data: [],
       })
       .eq("id", projectId);
