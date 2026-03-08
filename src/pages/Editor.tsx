@@ -199,6 +199,14 @@ export default function EditorPage() {
         />
 
         <div className="flex-1 flex flex-col overflow-hidden relative">
+          <ToolOptionsBar
+            activeTool={activeTool}
+            brushColor={brushColor}
+            brushSize={brushSize}
+            onBrushColorChange={setBrushColor}
+            onBrushSizeChange={setBrushSize}
+            pickedColor={pickedColor}
+          />
           <div className="flex-1 flex overflow-hidden relative">
             <FabricCanvas
               onInit={initCanvas}
