@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Plus, Sparkles, Image, Film, Clock, Trash2,
-  LogOut, User, Search, MoreVertical, FolderOpen
+  LogOut, User, Search, Settings, FolderOpen
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -94,6 +94,13 @@ export default function Dashboard() {
             <User className="w-4 h-4" />
             <span>{user?.user_metadata?.full_name || user?.email}</span>
           </div>
+          <button
+            onClick={() => navigate("/settings")}
+            className="studio-tool-btn w-8 h-8"
+            title="Profile settings"
+          >
+            <Settings className="w-4 h-4" />
+          </button>
           <button
             onClick={signOut}
             className="studio-tool-btn w-8 h-8"

@@ -1,1 +1,4 @@
 project_id = "tfbardwnwqlbwpodshql"
+
+[functions.ai-image-edit]
+verify_jwt = false
