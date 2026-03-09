@@ -926,5 +926,7 @@ export function useFabricCanvas() {
     setSelectedFill,
     setSelectedStroke,
     getSelectedObjectProps,
+    setSelectedFontFamily,
+    setSelectedFontSize,
   };
 }
