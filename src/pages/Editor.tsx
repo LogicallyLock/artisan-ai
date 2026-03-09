@@ -246,6 +246,8 @@ export default function EditorPage() {
             selectedLayerId={selectedLayerId}
             onFillChange={setSelectedFill}
             onStrokeChange={setSelectedStroke}
+            onFontFamilyChange={setSelectedFontFamily}
+            onFontSizeChange={setSelectedFontSize}
             getSelectedObjectProps={getSelectedObjectProps}
           />
           <div className="flex-1 flex overflow-hidden relative">

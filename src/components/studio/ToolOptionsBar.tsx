@@ -113,6 +113,37 @@ export function ToolOptionsBar({
               />
             ))}
           </div>
+          {isTextObj && (
+            <>
+              <div className="w-px h-4 bg-border" />
+              <span>Font</span>
+              <Select value={fontFamily} onValueChange={(v) => { setFontFamily(v); onFontFamilyChange(v); }}>
+                <SelectTrigger className="h-6 w-32 text-xs border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {fontOptions.map((f) => (
+                    <SelectItem key={f} value={f} className="text-xs" style={{ fontFamily: f }}>
+                      {f}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="w-px h-4 bg-border" />
+              <span>Size</span>
+              <div className="w-20">
+                <Slider
+                  value={[fontSize]}
+                  onValueChange={([v]) => { setFontSize(v); onFontSizeChange(v); }}
+                  min={8}
+                  max={120}
+                  step={1}
+                  className="h-4"
+                />
+              </div>
+              <span className="font-mono w-8 text-right">{fontSize}px</span>
+            </>
+          )}
         </>
       )}
 
