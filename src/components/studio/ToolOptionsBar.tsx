@@ -12,15 +12,17 @@ interface ToolOptionsBarProps {
   activeTool: ToolType;
   brushColor: string;
   brushSize: number;
+  brushType: "round" | "square" | "spray";
   onBrushColorChange: (color: string) => void;
   onBrushSizeChange: (size: number) => void;
+  onBrushTypeChange: (type: "round" | "square" | "spray") => void;
   pickedColor: string | null;
   selectedLayerId: string | null;
   onFillChange: (color: string) => void;
   onStrokeChange: (color: string) => void;
   onFontFamilyChange: (font: string) => void;
   onFontSizeChange: (size: number) => void;
-  getSelectedObjectProps: () => { fill: string | null; stroke: string | null; isText: boolean; fontFamily: string | null; fontSize: number | null } | null;
+  getSelectedObjectProps: () => { fill: string | null; stroke: string | null; isText: boolean; isImage: boolean; fontFamily: string | null; fontSize: number | null } | null;
 }
 
 const presetColors = [
@@ -28,12 +30,19 @@ const presetColors = [
   "#22c55e", "#3b82f6", "#8b5cf6", "#ec4899", "#6b7280",
 ];
 
+const brushTypes: { value: "round" | "square" | "spray"; label: string }[] = [
+  { value: "round", label: "Round" },
+  { value: "spray", label: "Spray" },
+];
+
 export function ToolOptionsBar({
   activeTool,
   brushColor,
   brushSize,
+  brushType,
   onBrushColorChange,
   onBrushSizeChange,
+  onBrushTypeChange,
   pickedColor,
   selectedLayerId,
   onFillChange,
@@ -49,7 +58,6 @@ export function ToolOptionsBar({
   const showZoomHint = activeTool === "Zoom";
   const showAIHint = ["AI Enhance", "AI Generate", "AI Layers", "Magic Select", "Cut Out"].includes(activeTool);
 
-  // Get fill/stroke/font for selected object
   const [fillColor, setFillColor] = useState<string>("#8b5cf6");
   const [strokeColor, setStrokeColor] = useState<string>("#8b5cf6");
   const [fontFamily, setFontFamily] = useState<string>("Arial");
@@ -76,7 +84,7 @@ export function ToolOptionsBar({
   }
 
   return (
-    <div className="h-9 studio-toolbar border-b border-border flex items-center px-3 gap-3 text-xs text-muted-foreground">
+    <div className="h-9 studio-toolbar border-b border-border flex items-center px-3 gap-3 text-xs text-muted-foreground overflow-x-auto">
       {showObjectProps && (
         <>
           <span className="text-foreground font-medium">Selection</span>
@@ -151,13 +159,34 @@ export function ToolOptionsBar({
         <>
           <span className="text-foreground font-medium">{activeTool}</span>
           <div className="w-px h-4 bg-border" />
+          {activeTool === "Brush" && (
+            <>
+              <span>Type</span>
+              <div className="flex gap-1">
+                {brushTypes.map((bt) => (
+                  <button
+                    key={bt.value}
+                    onClick={() => onBrushTypeChange(bt.value)}
+                    className={`px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
+                      brushType === bt.value
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                    }`}
+                  >
+                    {bt.label}
+                  </button>
+                ))}
+              </div>
+              <div className="w-px h-4 bg-border" />
+            </>
+          )}
           <span>Size</span>
           <div className="w-24">
             <Slider
               value={[brushSize]}
               onValueChange={([v]) => onBrushSizeChange(v)}
               min={1}
-              max={50}
+              max={80}
               step={1}
               className="h-4"
             />
@@ -183,6 +212,18 @@ export function ToolOptionsBar({
             onChange={(e) => onBrushColorChange(e.target.value)}
             className="w-6 h-6 rounded cursor-pointer border border-border"
           />
+          {/* Brush cursor preview */}
+          <div className="w-px h-4 bg-border" />
+          <div
+            className="rounded-full border border-muted-foreground"
+            style={{
+              width: Math.min(30, brushSize),
+              height: Math.min(30, brushSize),
+              backgroundColor: brushColor,
+              minWidth: 4,
+              minHeight: 4,
+            }}
+          />
         </>
       )}
 
@@ -193,10 +234,7 @@ export function ToolOptionsBar({
           <span>Click on canvas to sample color</span>
           {pickedColor && (
             <>
-              <div
-                className="w-6 h-6 rounded border border-border"
-                style={{ backgroundColor: pickedColor }}
-              />
+              <div className="w-6 h-6 rounded border border-border" style={{ backgroundColor: pickedColor }} />
               <span className="font-mono">{pickedColor}</span>
             </>
           )}
@@ -207,7 +245,7 @@ export function ToolOptionsBar({
         <>
           <span className="text-foreground font-medium">{activeTool}</span>
           <div className="w-px h-4 bg-border" />
-          <span>Click & drag on canvas to draw. Click without dragging for default size.</span>
+          <span>Click & drag to draw. Click for default size. Hold Shift for proportional.</span>
         </>
       )}
 
