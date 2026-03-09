@@ -858,11 +858,37 @@ export function useFabricCanvas() {
     if (!canvas) return null;
     const active = canvas.getActiveObject();
     if (!active) return null;
+    const isText = active.type === 'textbox' || active.type === 'i-text' || active.type === 'text';
     return {
       fill: typeof active.fill === "string" ? active.fill : null,
       stroke: typeof active.stroke === "string" ? active.stroke : null,
+      isText,
+      fontFamily: isText ? (active as any).fontFamily || "Arial" : null,
+      fontSize: isText ? (active as any).fontSize || 24 : null,
     };
   }, []);
+
+  const setSelectedFontFamily = useCallback((font: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const active = canvas.getActiveObject();
+    if (active && (active.type === 'textbox' || active.type === 'i-text' || active.type === 'text')) {
+      (active as any).set('fontFamily', font);
+      canvas.renderAll();
+      history.saveState(canvas);
+    }
+  }, [history]);
+
+  const setSelectedFontSize = useCallback((size: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const active = canvas.getActiveObject();
+    if (active && (active.type === 'textbox' || active.type === 'i-text' || active.type === 'text')) {
+      (active as any).set('fontSize', size);
+      canvas.renderAll();
+      history.saveState(canvas);
+    }
+  }, [history]);
 
   return {
     canvasRef,
@@ -900,5 +926,7 @@ export function useFabricCanvas() {
     setSelectedFill,
     setSelectedStroke,
     getSelectedObjectProps,
+    setSelectedFontFamily,
+    setSelectedFontSize,
   };
 }

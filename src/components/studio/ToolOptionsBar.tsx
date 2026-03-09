@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ToolType } from "@/hooks/useFabricCanvas";
+
+const fontOptions = [
+  "Arial", "Helvetica", "Georgia", "Times New Roman", "Courier New",
+  "Verdana", "Trebuchet MS", "Impact", "Comic Sans MS", "Palatino",
+];
 
 interface ToolOptionsBarProps {
   activeTool: ToolType;
@@ -12,7 +18,9 @@ interface ToolOptionsBarProps {
   selectedLayerId: string | null;
   onFillChange: (color: string) => void;
   onStrokeChange: (color: string) => void;
-  getSelectedObjectProps: () => { fill: string | null; stroke: string | null } | null;
+  onFontFamilyChange: (font: string) => void;
+  onFontSizeChange: (size: number) => void;
+  getSelectedObjectProps: () => { fill: string | null; stroke: string | null; isText: boolean; fontFamily: string | null; fontSize: number | null } | null;
 }
 
 const presetColors = [
@@ -30,6 +38,8 @@ export function ToolOptionsBar({
   selectedLayerId,
   onFillChange,
   onStrokeChange,
+  onFontFamilyChange,
+  onFontSizeChange,
   getSelectedObjectProps,
 }: ToolOptionsBarProps) {
   const showBrushOptions = ["Brush", "Pen", "Eraser"].includes(activeTool);
@@ -39,15 +49,23 @@ export function ToolOptionsBar({
   const showZoomHint = activeTool === "Zoom";
   const showAIHint = ["AI Enhance", "AI Generate", "AI Layers", "Magic Select", "Cut Out"].includes(activeTool);
 
-  // Get fill/stroke for selected object
+  // Get fill/stroke/font for selected object
   const [fillColor, setFillColor] = useState<string>("#8b5cf6");
   const [strokeColor, setStrokeColor] = useState<string>("#8b5cf6");
+  const [fontFamily, setFontFamily] = useState<string>("Arial");
+  const [fontSize, setFontSize] = useState<number>(24);
+  const [isTextObj, setIsTextObj] = useState(false);
 
   useEffect(() => {
     const props = getSelectedObjectProps();
     if (props) {
       if (props.fill) setFillColor(props.fill);
       if (props.stroke) setStrokeColor(props.stroke);
+      setIsTextObj(props.isText);
+      if (props.fontFamily) setFontFamily(props.fontFamily);
+      if (props.fontSize) setFontSize(props.fontSize);
+    } else {
+      setIsTextObj(false);
     }
   }, [selectedLayerId, getSelectedObjectProps]);
 
@@ -95,6 +113,37 @@ export function ToolOptionsBar({
               />
             ))}
           </div>
+          {isTextObj && (
+            <>
+              <div className="w-px h-4 bg-border" />
+              <span>Font</span>
+              <Select value={fontFamily} onValueChange={(v) => { setFontFamily(v); onFontFamilyChange(v); }}>
+                <SelectTrigger className="h-6 w-32 text-xs border-border">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {fontOptions.map((f) => (
+                    <SelectItem key={f} value={f} className="text-xs" style={{ fontFamily: f }}>
+                      {f}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="w-px h-4 bg-border" />
+              <span>Size</span>
+              <div className="w-20">
+                <Slider
+                  value={[fontSize]}
+                  onValueChange={([v]) => { setFontSize(v); onFontSizeChange(v); }}
+                  min={8}
+                  max={120}
+                  step={1}
+                  className="h-4"
+                />
+              </div>
+              <span className="font-mono w-8 text-right">{fontSize}px</span>
+            </>
+          )}
         </>
       )}
 
