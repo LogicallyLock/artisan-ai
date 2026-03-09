@@ -619,7 +619,7 @@ export function useFabricCanvas() {
     const active = canvas.getActiveObject();
     if (!active || !(active instanceof fabric.FabricImage)) return;
 
-    const filters: fabric.BaseFilter[] = [];
+    const filters: any[] = [];
 
     if (adjustments.brightness !== 0) {
       filters.push(new fabric.filters.Brightness({ brightness: adjustments.brightness / 200 }));
