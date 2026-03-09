@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useEffect } from "react";
 import * as fabric from "fabric";
+import { useAlignmentGuides } from "./useAlignmentGuides";
 
 // Undo/Redo history management
 function useCanvasHistory() {
@@ -17,7 +18,6 @@ function useCanvasHistory() {
   const saveState = useCallback((canvas: fabric.Canvas) => {
     if (isRestoringRef.current) return;
     const canvasJson = canvas.toJSON();
-    // Preserve custom __layerId on each object
     const objects = canvas.getObjects();
     if (canvasJson.objects) {
       canvasJson.objects.forEach((objJson: any, i: number) => {
@@ -27,10 +27,8 @@ function useCanvasHistory() {
       });
     }
     const json = JSON.stringify(canvasJson);
-    // Truncate forward history
     historyRef.current = historyRef.current.slice(0, indexRef.current + 1);
     historyRef.current.push(json);
-    // Cap at 50 entries
     if (historyRef.current.length > 50) {
       historyRef.current.shift();
     } else {
@@ -46,10 +44,8 @@ function useCanvasHistory() {
     isRestoringRef.current = true;
     const jsonStr = historyRef.current[newIndex];
     const parsed = JSON.parse(jsonStr);
-    // Extract custom __layerId before loading
     const layerIds = (parsed.objects || []).map((o: any) => o.__layerId || null);
     await canvas.loadFromJSON(parsed);
-    // Re-apply __layerId to restored objects
     const objects = canvas.getObjects();
     objects.forEach((obj, i) => {
       if (layerIds[i]) {
@@ -89,7 +85,11 @@ export function useFabricCanvas() {
   const [zoom, setZoom] = useState(100);
   const [brushColor, setBrushColor] = useState("#ffffff");
   const [brushSize, setBrushSize] = useState(5);
+  const [brushType, setBrushType] = useState<"round" | "square" | "spray">("round");
   const [pickedColor, setPickedColor] = useState<string | null>(null);
+  const [canvasWidth, setCanvasWidth] = useState(1200);
+  const [canvasHeight, setCanvasHeight] = useState(700);
+  const [canvasBg, setCanvasBg] = useState("#1a1a2e");
   const layerCountRef = useRef(0);
   const isPanningRef = useRef(false);
   const history = useCanvasHistory();
@@ -99,8 +99,8 @@ export function useFabricCanvas() {
   const currentShapeRef = useRef<fabric.FabricObject | null>(null);
   const cropRectRef = useRef<fabric.Rect | null>(null);
   const activeToolRef = useRef<ToolType>("Select");
+  const { setupSnapping } = useAlignmentGuides();
 
-  // Keep ref in sync
   useEffect(() => {
     activeToolRef.current = activeTool;
   }, [activeTool]);
@@ -119,6 +119,9 @@ export function useFabricCanvas() {
     });
 
     canvasRef.current = canvas;
+
+    // Setup alignment guides / snapping
+    setupSnapping(canvas);
 
     canvas.on("selection:created", (e) => {
       const obj = e.selected?.[0];
@@ -140,7 +143,7 @@ export function useFabricCanvas() {
       setSelectedLayerId(null);
     });
 
-    // Mouse down - handles Pan, Zoom click, Shape drawing, Color Picker
+    // Mouse down
     canvas.on("mouse:down", (opt) => {
       const tool = activeToolRef.current;
       const evt = opt.e as MouseEvent;
@@ -165,7 +168,6 @@ export function useFabricCanvas() {
       }
 
       if (tool === "Color Picker") {
-        // Sample color from canvas pixel
         const pointer = canvas.getScenePoint(evt);
         const ctx = canvas.getContext();
         const pixel = ctx.getImageData(
@@ -179,7 +181,6 @@ export function useFabricCanvas() {
         return;
       }
 
-      // Shape drawing (Rectangle/Ellipse draw-to-create)
       if (tool === "Rectangle" || tool === "Ellipse") {
         isDrawingShapeRef.current = true;
         const pointer = canvas.getScenePoint(evt);
@@ -187,31 +188,17 @@ export function useFabricCanvas() {
 
         if (tool === "Rectangle") {
           const rect = new fabric.Rect({
-            left: pointer.x,
-            top: pointer.y,
-            width: 0,
-            height: 0,
-            fill: "rgba(139, 92, 246, 0.3)",
-            stroke: "#8b5cf6",
-            strokeWidth: 2,
-            rx: 4,
-            ry: 4,
-            selectable: false,
-            evented: false,
+            left: pointer.x, top: pointer.y, width: 0, height: 0,
+            fill: "rgba(139, 92, 246, 0.3)", stroke: "#8b5cf6", strokeWidth: 2, rx: 4, ry: 4,
+            selectable: false, evented: false,
           });
           canvas.add(rect);
           currentShapeRef.current = rect;
         } else {
           const ellipse = new fabric.Ellipse({
-            left: pointer.x,
-            top: pointer.y,
-            rx: 0,
-            ry: 0,
-            fill: "rgba(59, 130, 246, 0.3)",
-            stroke: "#3b82f6",
-            strokeWidth: 2,
-            selectable: false,
-            evented: false,
+            left: pointer.x, top: pointer.y, rx: 0, ry: 0,
+            fill: "rgba(59, 130, 246, 0.3)", stroke: "#3b82f6", strokeWidth: 2,
+            selectable: false, evented: false,
           });
           canvas.add(ellipse);
           currentShapeRef.current = ellipse;
@@ -219,22 +206,14 @@ export function useFabricCanvas() {
         return;
       }
 
-      // Crop tool - draw crop region
       if (tool === "Crop") {
         isDrawingShapeRef.current = true;
         const pointer = canvas.getScenePoint(evt);
         shapeStartRef.current = { x: pointer.x, y: pointer.y };
         const cropRect = new fabric.Rect({
-          left: pointer.x,
-          top: pointer.y,
-          width: 0,
-          height: 0,
-          fill: "rgba(255,255,255,0.1)",
-          stroke: "#ffffff",
-          strokeWidth: 1,
-          strokeDashArray: [5, 5],
-          selectable: false,
-          evented: false,
+          left: pointer.x, top: pointer.y, width: 0, height: 0,
+          fill: "rgba(255,255,255,0.1)", stroke: "#ffffff", strokeWidth: 1,
+          strokeDashArray: [5, 5], selectable: false, evented: false,
         });
         canvas.add(cropRect);
         cropRectRef.current = cropRect;
@@ -247,7 +226,6 @@ export function useFabricCanvas() {
       const tool = activeToolRef.current;
       const evt = opt.e as MouseEvent;
 
-      // Pan
       if (isPanningRef.current && lastPosRef.current) {
         const vpt = canvas.viewportTransform!;
         vpt[4] += evt.clientX - lastPosRef.current.x;
@@ -257,31 +235,19 @@ export function useFabricCanvas() {
         return;
       }
 
-      // Shape / Crop drawing
       if (isDrawingShapeRef.current && shapeStartRef.current && currentShapeRef.current) {
         const pointer = canvas.getScenePoint(evt);
         const startX = shapeStartRef.current.x;
         const startY = shapeStartRef.current.y;
         const w = pointer.x - startX;
         const h = pointer.y - startY;
-
         const shape = currentShapeRef.current;
-        shape.set({
-          left: w > 0 ? startX : pointer.x,
-          top: h > 0 ? startY : pointer.y,
-        });
-
+        shape.set({ left: w > 0 ? startX : pointer.x, top: h > 0 ? startY : pointer.y });
         if (shape instanceof fabric.Ellipse) {
           shape.set({ rx: Math.abs(w) / 2, ry: Math.abs(h) / 2 });
-          // Adjust position for ellipse center
-          shape.set({
-            left: (w > 0 ? startX : pointer.x),
-            top: (h > 0 ? startY : pointer.y),
-          });
         } else {
           shape.set({ width: Math.abs(w), height: Math.abs(h) });
         }
-
         canvas.requestRenderAll();
       }
     });
@@ -289,7 +255,6 @@ export function useFabricCanvas() {
     canvas.on("mouse:up", (opt) => {
       const tool = activeToolRef.current;
 
-      // End pan
       if (isPanningRef.current) {
         isPanningRef.current = false;
         lastPosRef.current = null;
@@ -297,12 +262,10 @@ export function useFabricCanvas() {
         return;
       }
 
-      // End shape drawing
       if (isDrawingShapeRef.current && currentShapeRef.current) {
         isDrawingShapeRef.current = false;
         const shape = currentShapeRef.current;
 
-        // If crop tool, apply crop on mouse up
         if (tool === "Crop" && cropRectRef.current) {
           applyCrop(canvas, cropRectRef.current);
           cropRectRef.current = null;
@@ -311,44 +274,30 @@ export function useFabricCanvas() {
           return;
         }
 
-        // Check minimum size - if too small, remove and create default
         const w = shape instanceof fabric.Ellipse ? (shape.rx || 0) * 2 : (shape.width || 0);
         const h = shape instanceof fabric.Ellipse ? (shape.ry || 0) * 2 : (shape.height || 0);
 
         if (w < 5 && h < 5) {
           canvas.remove(shape);
-          // Create a default-sized shape
           if (tool === "Rectangle") {
             const rect = new fabric.Rect({
-              left: canvas.getWidth() / 2 - 75,
-              top: canvas.getHeight() / 2 - 50,
-              width: 150,
-              height: 100,
-              fill: "rgba(139, 92, 246, 0.3)",
-              stroke: "#8b5cf6",
-              strokeWidth: 2,
-              rx: 4,
-              ry: 4,
+              left: canvas.getWidth() / 2 - 75, top: canvas.getHeight() / 2 - 50,
+              width: 150, height: 100, fill: "rgba(139, 92, 246, 0.3)", stroke: "#8b5cf6",
+              strokeWidth: 2, rx: 4, ry: 4,
             });
             currentShapeRef.current = rect;
             canvas.add(rect);
             addLayerForObject(rect, "Rectangle", "shape");
           } else if (tool === "Ellipse") {
             const ellipse = new fabric.Ellipse({
-              left: canvas.getWidth() / 2 - 60,
-              top: canvas.getHeight() / 2 - 40,
-              rx: 60,
-              ry: 40,
-              fill: "rgba(59, 130, 246, 0.3)",
-              stroke: "#3b82f6",
-              strokeWidth: 2,
+              left: canvas.getWidth() / 2 - 60, top: canvas.getHeight() / 2 - 40,
+              rx: 60, ry: 40, fill: "rgba(59, 130, 246, 0.3)", stroke: "#3b82f6", strokeWidth: 2,
             });
             currentShapeRef.current = ellipse;
             canvas.add(ellipse);
             addLayerForObject(ellipse, "Ellipse", "shape");
           }
         } else {
-          // Finalize the drawn shape as a proper layer
           shape.set({ selectable: true, evented: true });
           const name = tool === "Rectangle" ? "Rectangle" : "Ellipse";
           addLayerForObject(shape, name, "shape");
@@ -370,7 +319,7 @@ export function useFabricCanvas() {
       opt.e.stopPropagation();
     });
 
-    // Path created from free drawing → register as layer
+    // Path created from free drawing
     canvas.on("path:created", (e: any) => {
       const path = e.path as fabric.Path;
       if (path) {
@@ -380,39 +329,25 @@ export function useFabricCanvas() {
       }
     });
 
-    // Save history on every object modification
     const saveHistory = () => history.saveState(canvas);
     canvas.on("object:added", saveHistory);
     canvas.on("object:modified", saveHistory);
     canvas.on("object:removed", saveHistory);
-    // Save initial state
     history.saveState(canvas);
 
     return canvas;
   }, []);
 
-  // Helper to add a fabric object as a tracked layer (used inside canvas event handlers)
   const addLayerForObject = useCallback((obj: fabric.FabricObject, name: string, type: CanvasLayer["type"]) => {
     layerCountRef.current += 1;
     const id = `layer-${Date.now()}-${layerCountRef.current}`;
     (obj as any).__layerId = id;
-
     const canvas = canvasRef.current;
     if (canvas) {
       canvas.setActiveObject(obj);
       canvas.requestRenderAll();
     }
-
-    const newLayer: CanvasLayer = {
-      id,
-      name,
-      type,
-      visible: true,
-      locked: false,
-      opacity: 100,
-      fabricObject: obj,
-    };
-
+    const newLayer: CanvasLayer = { id, name, type, visible: true, locked: false, opacity: 100, fabricObject: obj };
     setLayers((prev) => [newLayer, ...prev]);
     setSelectedLayerId(id);
     return id;
@@ -423,32 +358,17 @@ export function useFabricCanvas() {
     const top = cropRect.top || 0;
     const width = cropRect.width || 0;
     const height = cropRect.height || 0;
-
     canvas.remove(cropRect);
-
-    if (width < 10 || height < 10) {
-      canvas.requestRenderAll();
-      return;
-    }
-
-    // Export the crop region as image
-    const dataUrl = canvas.toDataURL({
-      format: "png",
-      left,
-      top,
-      width,
-      height,
-      multiplier: 1,
-    });
-
-    // Clear canvas and load cropped image
+    if (width < 10 || height < 10) { canvas.requestRenderAll(); return; }
+    const dataUrl = canvas.toDataURL({ format: "png", left, top, width, height, multiplier: 1 });
     const objects = canvas.getObjects().slice();
     objects.forEach((obj) => canvas.remove(obj));
     setLayers([]);
-
     fabric.FabricImage.fromURL(dataUrl, { crossOrigin: "anonymous" }).then((img) => {
       img.set({ left: 0, top: 0 });
       canvas.setDimensions({ width, height });
+      setCanvasWidth(width);
+      setCanvasHeight(height);
       canvas.add(img);
       addLayerForObject(img, "Cropped Image", "image");
       canvas.requestRenderAll();
@@ -463,24 +383,12 @@ export function useFabricCanvas() {
   const addLayer = useCallback((obj: fabric.FabricObject, name: string, type: CanvasLayer["type"]) => {
     const id = generateLayerId();
     (obj as any).__layerId = id;
-
     const canvas = canvasRef.current;
     if (!canvas) return id;
-
     canvas.add(obj);
     canvas.setActiveObject(obj);
     canvas.requestRenderAll();
-
-    const newLayer: CanvasLayer = {
-      id,
-      name,
-      type,
-      visible: true,
-      locked: false,
-      opacity: 100,
-      fabricObject: obj,
-    };
-
+    const newLayer: CanvasLayer = { id, name, type, visible: true, locked: false, opacity: 100, fabricObject: obj };
     setLayers((prev) => [newLayer, ...prev]);
     setSelectedLayerId(id);
     return id;
@@ -489,66 +397,36 @@ export function useFabricCanvas() {
   const addImageFromUrl = useCallback(async (url: string, name = "Image") => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     try {
       const img = await fabric.FabricImage.fromURL(url, { crossOrigin: "anonymous" });
-      const canvasWidth = canvas.getWidth();
-      const canvasHeight = canvas.getHeight();
-      const scale = Math.min(
-        (canvasWidth * 0.8) / img.width!,
-        (canvasHeight * 0.8) / img.height!,
-        1
-      );
-      img.set({
-        scaleX: scale,
-        scaleY: scale,
-        left: (canvasWidth - img.width! * scale) / 2,
-        top: (canvasHeight - img.height! * scale) / 2,
-      });
+      const cw = canvas.getWidth();
+      const ch = canvas.getHeight();
+      const scale = Math.min((cw * 0.8) / img.width!, (ch * 0.8) / img.height!, 1);
+      img.set({ scaleX: scale, scaleY: scale, left: (cw - img.width! * scale) / 2, top: (ch - img.height! * scale) / 2 });
       return addLayer(img, name, "image");
-    } catch (err) {
-      console.error("Failed to load image:", err);
-    }
+    } catch (err) { console.error("Failed to load image:", err); }
   }, [addLayer]);
 
   const addAIImage = useCallback(async (url: string, description: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     try {
       const img = await fabric.FabricImage.fromURL(url, { crossOrigin: "anonymous" });
-      const canvasWidth = canvas.getWidth();
-      const canvasHeight = canvas.getHeight();
-      const scale = Math.min(
-        (canvasWidth * 0.8) / img.width!,
-        (canvasHeight * 0.8) / img.height!,
-        1
-      );
-      img.set({
-        scaleX: scale,
-        scaleY: scale,
-        left: (canvasWidth - img.width! * scale) / 2,
-        top: (canvasHeight - img.height! * scale) / 2,
-      });
+      const cw = canvas.getWidth();
+      const ch = canvas.getHeight();
+      const scale = Math.min((cw * 0.8) / img.width!, (ch * 0.8) / img.height!, 1);
+      img.set({ scaleX: scale, scaleY: scale, left: (cw - img.width! * scale) / 2, top: (ch - img.height! * scale) / 2 });
       return addLayer(img, `AI: ${description.slice(0, 30)}`, "ai");
-    } catch (err) {
-      console.error("Failed to load AI image:", err);
-    }
+    } catch (err) { console.error("Failed to load AI image:", err); }
   }, [addLayer]);
 
   const addText = useCallback((text = "Double-click to edit") => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const textObj = new fabric.IText(text, {
-      left: canvas.getWidth() / 2 - 100,
-      top: canvas.getHeight() / 2 - 20,
-      fontSize: 36,
-      fill: "#ffffff",
-      fontFamily: "Inter, sans-serif",
-      editable: true,
+      left: canvas.getWidth() / 2 - 100, top: canvas.getHeight() / 2 - 20,
+      fontSize: 36, fill: "#ffffff", fontFamily: "Inter, sans-serif", editable: true,
     });
-
     return addLayer(textObj, `Text: ${text.slice(0, 20)}`, "text");
   }, [addLayer]);
 
@@ -556,15 +434,9 @@ export function useFabricCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = new fabric.Rect({
-      left: canvas.getWidth() / 2 - 75,
-      top: canvas.getHeight() / 2 - 50,
-      width: 150,
-      height: 100,
-      fill: "rgba(139, 92, 246, 0.3)",
-      stroke: "#8b5cf6",
-      strokeWidth: 2,
-      rx: 4,
-      ry: 4,
+      left: canvas.getWidth() / 2 - 75, top: canvas.getHeight() / 2 - 50,
+      width: 150, height: 100, fill: "rgba(139, 92, 246, 0.3)", stroke: "#8b5cf6",
+      strokeWidth: 2, rx: 4, ry: 4,
     });
     return addLayer(rect, "Rectangle", "shape");
   }, [addLayer]);
@@ -573,13 +445,8 @@ export function useFabricCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ellipse = new fabric.Ellipse({
-      left: canvas.getWidth() / 2 - 60,
-      top: canvas.getHeight() / 2 - 40,
-      rx: 60,
-      ry: 40,
-      fill: "rgba(59, 130, 246, 0.3)",
-      stroke: "#3b82f6",
-      strokeWidth: 2,
+      left: canvas.getWidth() / 2 - 60, top: canvas.getHeight() / 2 - 40,
+      rx: 60, ry: 40, fill: "rgba(59, 130, 246, 0.3)", stroke: "#3b82f6", strokeWidth: 2,
     });
     return addLayer(ellipse, "Ellipse", "shape");
   }, [addLayer]);
@@ -587,37 +454,43 @@ export function useFabricCanvas() {
   const enableDrawing = useCallback((enable: boolean, mode: "brush" | "pen" | "eraser" = "brush") => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     canvas.isDrawingMode = enable;
     if (enable) {
-      const brush = new fabric.PencilBrush(canvas);
-      if (mode === "eraser") {
-        brush.color = "#1a1a2e"; // background color to simulate erase
-        brush.width = brushSize * 3;
-      } else if (mode === "pen") {
-        brush.color = brushColor;
-        brush.width = Math.max(1, brushSize / 2); // thinner for pen
+      let brush: fabric.BaseBrush;
+      if (brushType === "spray") {
+        const sprayBrush = new fabric.SprayBrush(canvas);
+        sprayBrush.width = brushSize;
+        sprayBrush.density = 20;
+        sprayBrush.color = mode === "eraser" ? canvasBg : brushColor;
+        brush = sprayBrush;
       } else {
-        brush.color = brushColor;
-        brush.width = brushSize;
+        const pencilBrush = new fabric.PencilBrush(canvas);
+        if (mode === "eraser") {
+          pencilBrush.color = canvasBg;
+          pencilBrush.width = brushSize * 3;
+        } else if (mode === "pen") {
+          pencilBrush.color = brushColor;
+          pencilBrush.width = Math.max(1, brushSize / 2);
+        } else {
+          pencilBrush.color = brushColor;
+          pencilBrush.width = brushSize;
+        }
+        brush = pencilBrush;
       }
       canvas.freeDrawingBrush = brush;
     }
-  }, [brushColor, brushSize]);
+  }, [brushColor, brushSize, brushType, canvasBg]);
 
   const deleteSelected = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const active = canvas.getActiveObjects();
     if (active.length === 0) return;
-
     active.forEach((obj) => {
       const layerId = (obj as any).__layerId;
       canvas.remove(obj);
       setLayers((prev) => prev.filter((l) => l.id !== layerId));
     });
-
     canvas.discardActiveObject();
     canvas.requestRenderAll();
   }, []);
@@ -626,12 +499,9 @@ export function useFabricCanvas() {
     setLayers((prev) =>
       prev.map((l) => {
         if (l.id === layerId) {
-          const newVisible = !l.visible;
-          if (l.fabricObject) {
-            l.fabricObject.visible = newVisible;
-            canvasRef.current?.requestRenderAll();
-          }
-          return { ...l, visible: newVisible };
+          const v = !l.visible;
+          if (l.fabricObject) { l.fabricObject.visible = v; canvasRef.current?.requestRenderAll(); }
+          return { ...l, visible: v };
         }
         return l;
       })
@@ -642,13 +512,9 @@ export function useFabricCanvas() {
     setLayers((prev) =>
       prev.map((l) => {
         if (l.id === layerId) {
-          const newLocked = !l.locked;
-          if (l.fabricObject) {
-            l.fabricObject.selectable = !newLocked;
-            l.fabricObject.evented = !newLocked;
-            canvasRef.current?.requestRenderAll();
-          }
-          return { ...l, locked: newLocked };
+          const locked = !l.locked;
+          if (l.fabricObject) { l.fabricObject.selectable = !locked; l.fabricObject.evented = !locked; canvasRef.current?.requestRenderAll(); }
+          return { ...l, locked };
         }
         return l;
       })
@@ -659,16 +525,64 @@ export function useFabricCanvas() {
     setLayers((prev) =>
       prev.map((l) => {
         if (l.id === layerId) {
-          if (l.fabricObject) {
-            l.fabricObject.opacity = opacity / 100;
-            canvasRef.current?.requestRenderAll();
-          }
+          if (l.fabricObject) { l.fabricObject.opacity = opacity / 100; canvasRef.current?.requestRenderAll(); }
           return { ...l, opacity };
         }
         return l;
       })
     );
   }, []);
+
+  // Duplicate selected layer
+  const duplicateLayer = useCallback((layerId: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const layer = layers.find((l) => l.id === layerId);
+    if (!layer?.fabricObject) return;
+    layer.fabricObject.clone().then((cloned: fabric.FabricObject) => {
+      cloned.set({ left: (cloned.left || 0) + 20, top: (cloned.top || 0) + 20 });
+      addLayer(cloned, `${layer.name} (copy)`, layer.type);
+    });
+  }, [layers, addLayer]);
+
+  // Move layer up/down in stack
+  const moveLayerUp = useCallback((layerId: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const layer = layers.find((l) => l.id === layerId);
+    if (!layer?.fabricObject) return;
+    const idx = canvas.getObjects().indexOf(layer.fabricObject);
+    if (idx < canvas.getObjects().length - 1) {
+      canvas.moveObjectTo(layer.fabricObject, idx + 1);
+      canvas.requestRenderAll();
+      setLayers((prev) => {
+        const i = prev.findIndex((l) => l.id === layerId);
+        if (i <= 0) return prev;
+        const next = [...prev];
+        [next[i], next[i - 1]] = [next[i - 1], next[i]];
+        return next;
+      });
+    }
+  }, [layers]);
+
+  const moveLayerDown = useCallback((layerId: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const layer = layers.find((l) => l.id === layerId);
+    if (!layer?.fabricObject) return;
+    const idx = canvas.getObjects().indexOf(layer.fabricObject);
+    if (idx > 0) {
+      canvas.moveObjectTo(layer.fabricObject, idx - 1);
+      canvas.requestRenderAll();
+      setLayers((prev) => {
+        const i = prev.findIndex((l) => l.id === layerId);
+        if (i >= prev.length - 1) return prev;
+        const next = [...prev];
+        [next[i], next[i + 1]] = [next[i + 1], next[i]];
+        return next;
+      });
+    }
+  }, [layers]);
 
   const selectLayer = useCallback((layerId: string) => {
     setSelectedLayerId(layerId);
@@ -679,17 +593,62 @@ export function useFabricCanvas() {
     }
   }, [layers]);
 
+  // Canvas resize
+  const resizeCanvas = useCallback((w: number, h: number) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.setDimensions({ width: w, height: h });
+    setCanvasWidth(w);
+    setCanvasHeight(h);
+    canvas.requestRenderAll();
+  }, []);
+
+  // Canvas background
+  const changeCanvasBg = useCallback((color: string) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.backgroundColor = color === "transparent" ? "" : color;
+    setCanvasBg(color);
+    canvas.requestRenderAll();
+  }, []);
+
+  // Image adjustments via CSS filters applied to fabric image
+  const applyImageAdjustments = useCallback((adjustments: { brightness: number; contrast: number; saturation: number; hue: number }) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const active = canvas.getActiveObject();
+    if (!active || !(active instanceof fabric.FabricImage)) return;
+
+    const filters: fabric.BaseFilter[] = [];
+
+    if (adjustments.brightness !== 0) {
+      filters.push(new fabric.filters.Brightness({ brightness: adjustments.brightness / 200 }));
+    }
+    if (adjustments.contrast !== 0) {
+      filters.push(new fabric.filters.Contrast({ contrast: adjustments.contrast / 100 }));
+    }
+    if (adjustments.saturation !== 0) {
+      filters.push(new fabric.filters.Saturation({ saturation: adjustments.saturation / 100 }));
+    }
+    if (adjustments.hue !== 0) {
+      filters.push(new fabric.filters.HueRotation({ rotation: adjustments.hue / 360 }));
+    }
+
+    active.filters = filters;
+    active.applyFilters();
+    canvas.requestRenderAll();
+  }, []);
+
   // Apply tool changes
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // Reset modes
     canvas.isDrawingMode = false;
     canvas.selection = true;
     canvas.defaultCursor = "default";
     canvas.getObjects().forEach((obj) => {
-      if (!(obj as any).__isCropOverlay) {
+      if (!(obj as any).__isCropOverlay && !(obj as any).__isGuide) {
         obj.selectable = !(obj as any).__isLocked;
         obj.evented = !(obj as any).__isLocked;
       }
@@ -707,35 +666,19 @@ export function useFabricCanvas() {
       case "Pan":
         canvas.selection = false;
         canvas.defaultCursor = "grab";
-        canvas.getObjects().forEach((obj) => {
-          obj.selectable = false;
-          obj.evented = false;
-        });
+        canvas.getObjects().forEach((obj) => { obj.selectable = false; obj.evented = false; });
         break;
       case "Zoom":
         canvas.selection = false;
         canvas.defaultCursor = "zoom-in";
-        canvas.getObjects().forEach((obj) => {
-          obj.selectable = false;
-          obj.evented = false;
-        });
+        canvas.getObjects().forEach((obj) => { obj.selectable = false; obj.evented = false; });
         break;
       case "Crop":
-        canvas.selection = false;
-        canvas.defaultCursor = "crosshair";
-        canvas.getObjects().forEach((obj) => {
-          obj.selectable = false;
-          obj.evented = false;
-        });
-        break;
       case "Rectangle":
       case "Ellipse":
         canvas.selection = false;
         canvas.defaultCursor = "crosshair";
-        canvas.getObjects().forEach((obj) => {
-          obj.selectable = false;
-          obj.evented = false;
-        });
+        canvas.getObjects().forEach((obj) => { obj.selectable = false; obj.evented = false; });
         break;
       case "Text":
         canvas.defaultCursor = "text";
@@ -752,10 +695,7 @@ export function useFabricCanvas() {
       case "Color Picker":
         canvas.selection = false;
         canvas.defaultCursor = "crosshair";
-        canvas.getObjects().forEach((obj) => {
-          obj.selectable = false;
-          obj.evented = false;
-        });
+        canvas.getObjects().forEach((obj) => { obj.selectable = false; obj.evented = false; });
         break;
     }
 
@@ -764,8 +704,6 @@ export function useFabricCanvas() {
 
   const handleToolAction = useCallback((tool: ToolType) => {
     setActiveToolState(tool);
-
-    // Text creates object immediately on click
     if (tool === "Text") {
       addText();
       setActiveToolState("Select");
@@ -813,7 +751,6 @@ export function useFabricCanvas() {
     if (canvas) history.restore(canvas, "redo").then(() => syncLayersFromCanvas());
   }, []);
 
-  // Rebuild layers state from canvas objects after undo/redo
   const syncLayersFromCanvas = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -837,20 +774,14 @@ export function useFabricCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const active = canvas.getActiveObject();
-    if (active) {
-      active.set("fill", color);
-      canvas.requestRenderAll();
-    }
+    if (active) { active.set("fill", color); canvas.requestRenderAll(); }
   }, []);
 
   const setSelectedStroke = useCallback((color: string) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const active = canvas.getActiveObject();
-    if (active) {
-      active.set("stroke", color);
-      canvas.requestRenderAll();
-    }
+    if (active) { active.set("stroke", color); canvas.requestRenderAll(); }
   }, []);
 
   const getSelectedObjectProps = useCallback(() => {
@@ -859,10 +790,12 @@ export function useFabricCanvas() {
     const active = canvas.getActiveObject();
     if (!active) return null;
     const isText = active.type === 'textbox' || active.type === 'i-text' || active.type === 'text';
+    const isImage = active instanceof fabric.FabricImage;
     return {
       fill: typeof active.fill === "string" ? active.fill : null,
       stroke: typeof active.stroke === "string" ? active.stroke : null,
       isText,
+      isImage,
       fontFamily: isText ? (active as any).fontFamily || "Arial" : null,
       fontSize: isText ? (active as any).fontSize || 24 : null,
     };
@@ -913,10 +846,15 @@ export function useFabricCanvas() {
     toggleLayerVisibility,
     toggleLayerLock,
     setLayerOpacity,
+    duplicateLayer,
+    moveLayerUp,
+    moveLayerDown,
     brushColor,
     setBrushColor,
     brushSize,
     setBrushSize,
+    brushType,
+    setBrushType,
     pickedColor,
     exportCanvasAsDataUrl,
     undo,
@@ -928,5 +866,11 @@ export function useFabricCanvas() {
     getSelectedObjectProps,
     setSelectedFontFamily,
     setSelectedFontSize,
+    canvasWidth,
+    canvasHeight,
+    canvasBg,
+    resizeCanvas,
+    changeCanvasBg,
+    applyImageAdjustments,
   };
 }

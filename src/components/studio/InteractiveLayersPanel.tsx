@@ -1,4 +1,5 @@
-import { Eye, EyeOff, Lock, Unlock, Trash2, Plus, Sparkles, Image, Type, Layers, PenTool } from "lucide-react";
+import { Eye, EyeOff, Lock, Unlock, Trash2, Copy, ChevronUp, ChevronDown, Layers, Sparkles, Image, Type, PenTool } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { CanvasLayer } from "@/hooks/useFabricCanvas";
 
 const typeIcons: Record<CanvasLayer["type"], any> = {
@@ -25,6 +26,9 @@ interface InteractiveLayersPanelProps {
   onToggleLock: (id: string) => void;
   onSetOpacity: (id: string, opacity: number) => void;
   onDelete: () => void;
+  onDuplicate?: (id: string) => void;
+  onMoveUp?: (id: string) => void;
+  onMoveDown?: (id: string) => void;
 }
 
 export function InteractiveLayersPanel({
@@ -35,6 +39,9 @@ export function InteractiveLayersPanel({
   onToggleLock,
   onSetOpacity,
   onDelete,
+  onDuplicate,
+  onMoveUp,
+  onMoveDown,
 }: InteractiveLayersPanelProps) {
   const selectedLayer = layers.find((l) => l.id === selectedLayerId);
 
@@ -116,9 +123,51 @@ export function InteractiveLayersPanel({
 
       {/* Bottom actions */}
       <div className="h-9 flex items-center justify-center gap-1 border-t border-border">
-        <button className="studio-tool-btn w-7 h-7" title="Delete selected" onClick={onDelete}>
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <button
+              className="studio-tool-btn w-7 h-7"
+              disabled={!selectedLayerId}
+              onClick={() => selectedLayerId && onDuplicate?.(selectedLayerId)}
+            >
+              <Copy className="w-3.5 h-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">Duplicate Layer</TooltipContent>
+        </Tooltip>
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <button
+              className="studio-tool-btn w-7 h-7"
+              disabled={!selectedLayerId}
+              onClick={() => selectedLayerId && onMoveUp?.(selectedLayerId)}
+            >
+              <ChevronUp className="w-3.5 h-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">Move Up</TooltipContent>
+        </Tooltip>
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <button
+              className="studio-tool-btn w-7 h-7"
+              disabled={!selectedLayerId}
+              onClick={() => selectedLayerId && onMoveDown?.(selectedLayerId)}
+            >
+              <ChevronDown className="w-3.5 h-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">Move Down</TooltipContent>
+        </Tooltip>
+        <div className="w-px h-4 bg-border mx-1" />
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <button className="studio-tool-btn w-7 h-7 text-destructive" onClick={onDelete}>
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">Delete Layer</TooltipContent>
+        </Tooltip>
       </div>
     </div>
   );

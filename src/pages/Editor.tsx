@@ -11,6 +11,8 @@ import { AIPromptBar } from "@/components/studio/AIPromptBar";
 import { ToolOptionsBar } from "@/components/studio/ToolOptionsBar";
 import { ExportDialog } from "@/components/studio/ExportDialog";
 import { ShareDialog } from "@/components/studio/ShareDialog";
+import { ImageAdjustmentsPanel } from "@/components/studio/ImageAdjustmentsPanel";
+import { CanvasSettingsPanel } from "@/components/studio/CanvasSettingsPanel";
 import { useRealtimeCollaboration, CollaboratorAvatars } from "@/components/studio/RealtimeCollaboration";
 import { useFabricCanvas } from "@/hooks/useFabricCanvas";
 import { toast } from "sonner";
@@ -24,41 +26,9 @@ export default function EditorPage() {
   const [loading, setLoading] = useState(true);
   const [exportOpen, setExportOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  const [rightTab, setRightTab] = useState<"layers" | "adjustments" | "settings">("layers");
 
-  const {
-    initCanvas,
-    layers,
-    activeTool,
-    setActiveTool,
-    selectedLayerId,
-    selectLayer,
-    zoom,
-    zoomIn,
-    zoomOut,
-    resetZoom,
-    addImageFromUrl,
-    addAIImage,
-    deleteSelected,
-    toggleLayerVisibility,
-    toggleLayerLock,
-    setLayerOpacity,
-    exportCanvasAsDataUrl,
-    brushColor,
-    setBrushColor,
-    brushSize,
-    setBrushSize,
-    pickedColor,
-    undo,
-    redo,
-    canUndo,
-    canRedo,
-    setSelectedFill,
-    setSelectedStroke,
-    getSelectedObjectProps,
-    setSelectedFontFamily,
-    setSelectedFontSize,
-  } = useFabricCanvas();
-
+  const fabric = useFabricCanvas();
   const { onlineUsers } = useRealtimeCollaboration(projectId);
 
   useEffect(() => {
@@ -71,12 +41,11 @@ export default function EditorPage() {
     const handler = (e: KeyboardEvent) => {
       const isInput = e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement;
 
-      // Ctrl/Cmd shortcuts always work (even from inputs)
       if (e.metaKey || e.ctrlKey) {
         if (e.key.toLowerCase() === "z") {
           e.preventDefault();
-          if (e.shiftKey) redo();
-          else undo();
+          if (e.shiftKey) fabric.redo();
+          else fabric.undo();
           return;
         }
         if (e.key.toLowerCase() === "s") {
@@ -87,48 +56,41 @@ export default function EditorPage() {
         return;
       }
 
-      // Block single-key shortcuts when typing in real inputs (not fabric's hidden textarea)
       if (isInput) return;
 
       if (e.key === "Delete" || e.key === "Backspace") {
-        deleteSelected();
+        fabric.deleteSelected();
         return;
       }
 
       const shortcuts: Record<string, () => void> = {
-        v: () => setActiveTool("Select"),
-        m: () => setActiveTool("Move"),
-        h: () => setActiveTool("Pan"),
-        z: () => setActiveTool("Zoom"),
-        c: () => setActiveTool("Crop"),
-        t: () => setActiveTool("Text"),
-        r: () => setActiveTool("Rectangle"),
-        e: () => setActiveTool("Ellipse"),
-        b: () => setActiveTool("Brush"),
-        p: () => setActiveTool("Pen"),
-        x: () => setActiveTool("Eraser"),
-        i: () => setActiveTool("Color Picker"),
-        w: () => setActiveTool("Magic Select"),
-        l: () => setActiveTool("Cut Out"),
-        a: () => setActiveTool("AI Enhance"),
-        g: () => setActiveTool("AI Generate"),
-        k: () => setActiveTool("AI Layers"),
+        v: () => fabric.setActiveTool("Select"),
+        m: () => fabric.setActiveTool("Move"),
+        h: () => fabric.setActiveTool("Pan"),
+        z: () => fabric.setActiveTool("Zoom"),
+        c: () => fabric.setActiveTool("Crop"),
+        t: () => fabric.setActiveTool("Text"),
+        r: () => fabric.setActiveTool("Rectangle"),
+        e: () => fabric.setActiveTool("Ellipse"),
+        b: () => fabric.setActiveTool("Brush"),
+        p: () => fabric.setActiveTool("Pen"),
+        x: () => fabric.setActiveTool("Eraser"),
+        i: () => fabric.setActiveTool("Color Picker"),
+        w: () => fabric.setActiveTool("Magic Select"),
+        l: () => fabric.setActiveTool("Cut Out"),
+        a: () => fabric.setActiveTool("AI Enhance"),
+        g: () => fabric.setActiveTool("AI Generate"),
+        k: () => fabric.setActiveTool("AI Layers"),
       };
 
       if (shortcuts[e.key.toLowerCase()]) {
         e.preventDefault();
         shortcuts[e.key.toLowerCase()]();
       }
-
-      // Ctrl+S to save
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        saveProject();
-      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [deleteSelected, setActiveTool, undo, redo]);
+  }, [fabric.deleteSelected, fabric.setActiveTool, fabric.undo, fabric.redo]);
 
   const loadProject = async () => {
     const { data, error } = await supabase
@@ -147,18 +109,16 @@ export default function EditorPage() {
     setMode(data.type as "image" | "video");
     setLoading(false);
 
-    // Load saved image into canvas after init
     const canvasData = data.canvas_data as any;
     if (canvasData?.imageUrl) {
-      // Delay to let canvas initialize
       setTimeout(() => {
-        addImageFromUrl(canvasData.imageUrl, "Saved Image");
+        fabric.addImageFromUrl(canvasData.imageUrl, "Saved Image");
       }, 500);
     }
   };
 
   const handleImageUpload = async (localUrl: string) => {
-    await addImageFromUrl(localUrl, "Imported Image");
+    await fabric.addImageFromUrl(localUrl, "Imported Image");
 
     if (user && projectId) {
       try {
@@ -172,7 +132,6 @@ export default function EditorPage() {
           .upload(filePath, blob, { upsert: true });
 
         if (error) { console.error("Upload error:", error); return; }
-
         toast.success("Image imported!");
       } catch (err) {
         console.error("Upload failed:", err);
@@ -181,13 +140,13 @@ export default function EditorPage() {
   };
 
   const handleAIResult = async (imageUrl: string, description: string) => {
-    await addAIImage(imageUrl, description);
+    await fabric.addAIImage(imageUrl, description);
     toast.success("AI result added as editable layer!");
   };
 
   const saveProject = useCallback(async () => {
     if (!projectId) return;
-    const canvasDataUrl = exportCanvasAsDataUrl();
+    const canvasDataUrl = fabric.exportCanvasAsDataUrl();
     const { error } = await supabase
       .from("projects")
       .update({
@@ -200,7 +159,7 @@ export default function EditorPage() {
 
     if (error) { toast.error("Failed to save"); }
     else { toast.success("Project saved!"); }
-  }, [projectId, projectName, mode, exportCanvasAsDataUrl]);
+  }, [projectId, projectName, mode, fabric.exportCanvasAsDataUrl]);
 
   if (loading) {
     return (
@@ -219,10 +178,10 @@ export default function EditorPage() {
         onProjectNameChange={setProjectName}
         onSave={saveProject}
         onBack={() => navigate("/dashboard")}
-        onUndo={undo}
-        onRedo={redo}
-        canUndo={canUndo}
-        canRedo={canRedo}
+        onUndo={fabric.undo}
+        onRedo={fabric.redo}
+        canUndo={fabric.canUndo}
+        canRedo={fabric.canRedo}
         onExport={() => setExportOpen(true)}
         onShare={() => setShareOpen(true)}
         collaborators={<CollaboratorAvatars users={onlineUsers} />}
@@ -230,58 +189,108 @@ export default function EditorPage() {
 
       <div className="flex-1 flex overflow-hidden relative">
         <InteractiveToolsPanel
-          activeTool={activeTool}
-          onToolSelect={setActiveTool}
-          onDelete={deleteSelected}
+          activeTool={fabric.activeTool}
+          onToolSelect={fabric.setActiveTool}
+          onDelete={fabric.deleteSelected}
         />
 
         <div className="flex-1 flex flex-col overflow-hidden relative">
           <ToolOptionsBar
-            activeTool={activeTool}
-            brushColor={brushColor}
-            brushSize={brushSize}
-            onBrushColorChange={setBrushColor}
-            onBrushSizeChange={setBrushSize}
-            pickedColor={pickedColor}
-            selectedLayerId={selectedLayerId}
-            onFillChange={setSelectedFill}
-            onStrokeChange={setSelectedStroke}
-            onFontFamilyChange={setSelectedFontFamily}
-            onFontSizeChange={setSelectedFontSize}
-            getSelectedObjectProps={getSelectedObjectProps}
+            activeTool={fabric.activeTool}
+            brushColor={fabric.brushColor}
+            brushSize={fabric.brushSize}
+            brushType={fabric.brushType}
+            onBrushColorChange={fabric.setBrushColor}
+            onBrushSizeChange={fabric.setBrushSize}
+            onBrushTypeChange={fabric.setBrushType}
+            pickedColor={fabric.pickedColor}
+            selectedLayerId={fabric.selectedLayerId}
+            onFillChange={fabric.setSelectedFill}
+            onStrokeChange={fabric.setSelectedStroke}
+            onFontFamilyChange={fabric.setSelectedFontFamily}
+            onFontSizeChange={fabric.setSelectedFontSize}
+            getSelectedObjectProps={fabric.getSelectedObjectProps}
           />
           <div className="flex-1 flex overflow-hidden relative">
             <FabricCanvas
-              onInit={initCanvas}
+              onInit={fabric.initCanvas}
               onImageUpload={handleImageUpload}
-              zoom={zoom}
-              onZoomIn={zoomIn}
-              onZoomOut={zoomOut}
-              onResetZoom={resetZoom}
+              zoom={fabric.zoom}
+              onZoomIn={fabric.zoomIn}
+              onZoomOut={fabric.zoomOut}
+              onResetZoom={fabric.resetZoom}
             />
             <AIPromptBar
-              currentImageUrl={exportCanvasAsDataUrl()}
+              currentImageUrl={fabric.exportCanvasAsDataUrl()}
               onAIResult={handleAIResult}
             />
           </div>
           {mode === "video" && <TimelinePanel />}
         </div>
 
-        <InteractiveLayersPanel
-          layers={layers}
-          selectedLayerId={selectedLayerId}
-          onSelectLayer={selectLayer}
-          onToggleVisibility={toggleLayerVisibility}
-          onToggleLock={toggleLayerLock}
-          onSetOpacity={setLayerOpacity}
-          onDelete={deleteSelected}
-        />
+        {/* Right panel with tabs */}
+        <div className="w-64 studio-panel border-l border-border flex flex-col">
+          {/* Tab bar */}
+          <div className="h-8 flex items-center border-b border-border px-1 gap-0.5">
+            {(["layers", "adjustments", "settings"] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setRightTab(tab)}
+                className={`px-2 py-1 rounded text-[10px] font-medium uppercase tracking-wide transition-colors ${
+                  rightTab === tab
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {rightTab === "layers" && (
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <InteractiveLayersPanel
+                layers={fabric.layers}
+                selectedLayerId={fabric.selectedLayerId}
+                onSelectLayer={fabric.selectLayer}
+                onToggleVisibility={fabric.toggleLayerVisibility}
+                onToggleLock={fabric.toggleLayerLock}
+                onSetOpacity={fabric.setLayerOpacity}
+                onDelete={fabric.deleteSelected}
+                onDuplicate={fabric.duplicateLayer}
+                onMoveUp={fabric.moveLayerUp}
+                onMoveDown={fabric.moveLayerDown}
+              />
+            </div>
+          )}
+
+          {rightTab === "adjustments" && (
+            <div className="flex-1 overflow-y-auto studio-scrollbar">
+              <ImageAdjustmentsPanel
+                onApplyFilter={fabric.applyImageAdjustments}
+                hasSelection={!!fabric.selectedLayerId}
+              />
+            </div>
+          )}
+
+          {rightTab === "settings" && (
+            <div className="flex-1 overflow-y-auto studio-scrollbar">
+              <CanvasSettingsPanel
+                canvasWidth={fabric.canvasWidth}
+                canvasHeight={fabric.canvasHeight}
+                canvasBg={fabric.canvasBg}
+                onResize={fabric.resizeCanvas}
+                onBgChange={fabric.changeCanvasBg}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <ExportDialog
         open={exportOpen}
         onClose={() => setExportOpen(false)}
-        imageUrl={exportCanvasAsDataUrl()}
+        imageUrl={fabric.exportCanvasAsDataUrl()}
         mode={mode}
       />
       <ShareDialog
