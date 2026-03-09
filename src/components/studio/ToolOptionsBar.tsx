@@ -38,6 +38,8 @@ export function ToolOptionsBar({
   selectedLayerId,
   onFillChange,
   onStrokeChange,
+  onFontFamilyChange,
+  onFontSizeChange,
   getSelectedObjectProps,
 }: ToolOptionsBarProps) {
   const showBrushOptions = ["Brush", "Pen", "Eraser"].includes(activeTool);
