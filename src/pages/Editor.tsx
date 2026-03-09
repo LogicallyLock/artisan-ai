@@ -55,6 +55,8 @@ export default function EditorPage() {
     setSelectedFill,
     setSelectedStroke,
     getSelectedObjectProps,
+    setSelectedFontFamily,
+    setSelectedFontSize,
   } = useFabricCanvas();
 
   const { onlineUsers } = useRealtimeCollaboration(projectId);
