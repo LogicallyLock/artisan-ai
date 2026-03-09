@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { ToolType } from "@/hooks/useFabricCanvas";
+
+const fontOptions = [
+  "Arial", "Helvetica", "Georgia", "Times New Roman", "Courier New",
+  "Verdana", "Trebuchet MS", "Impact", "Comic Sans MS", "Palatino",
+];
 
 interface ToolOptionsBarProps {
   activeTool: ToolType;
@@ -12,7 +18,9 @@ interface ToolOptionsBarProps {
   selectedLayerId: string | null;
   onFillChange: (color: string) => void;
   onStrokeChange: (color: string) => void;
-  getSelectedObjectProps: () => { fill: string | null; stroke: string | null } | null;
+  onFontFamilyChange: (font: string) => void;
+  onFontSizeChange: (size: number) => void;
+  getSelectedObjectProps: () => { fill: string | null; stroke: string | null; isText: boolean; fontFamily: string | null; fontSize: number | null } | null;
 }
 
 const presetColors = [
