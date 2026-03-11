@@ -324,6 +324,16 @@ export function useFabricCanvas() {
       const path = e.path as fabric.Path;
       if (path) {
         const tool = activeToolRef.current;
+        if (tool === "Eraser") {
+          // Apply destination-out to actually erase underlying content
+          path.set({
+            globalCompositeOperation: "destination-out",
+            stroke: "rgba(0,0,0,1)",
+            selectable: false,
+            evented: false,
+          });
+          canvas.requestRenderAll();
+        }
         const name = tool === "Eraser" ? "Eraser Stroke" : tool === "Pen" ? "Pen Path" : "Brush Stroke";
         addLayerForObject(path, name, "drawing");
       }
