@@ -134,6 +134,7 @@ export default function EditorPage() {
     updateFrame();
   }, [videoEngine.videoFrame, mode]);
 
+  const handleImageUpload = async (localUrl: string) => {
     await fabric.addImageFromUrl(localUrl, "Imported Image");
 
     if (user && projectId) {
