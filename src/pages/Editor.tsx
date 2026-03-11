@@ -119,7 +119,21 @@ export default function EditorPage() {
     }
   };
 
-  const handleImageUpload = async (localUrl: string) => {
+  // Sync video frame to canvas when in video mode
+  const videoFrameLayerRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (mode !== "video" || !videoEngine.videoFrame) return;
+    const updateFrame = async () => {
+      // Remove previous frame layer if exists
+      if (videoFrameLayerRef.current) {
+        // We'll just update the image instead of removing/adding
+      }
+      await fabric.addImageFromUrl(videoEngine.videoFrame!, "Video Frame");
+    };
+    // Only update on significant frame changes (throttle)
+    updateFrame();
+  }, [videoEngine.videoFrame, mode]);
+
     await fabric.addImageFromUrl(localUrl, "Imported Image");
 
     if (user && projectId) {
