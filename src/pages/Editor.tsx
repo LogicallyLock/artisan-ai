@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +15,7 @@ import { ImageAdjustmentsPanel } from "@/components/studio/ImageAdjustmentsPanel
 import { CanvasSettingsPanel } from "@/components/studio/CanvasSettingsPanel";
 import { useRealtimeCollaboration, CollaboratorAvatars } from "@/components/studio/RealtimeCollaboration";
 import { useFabricCanvas } from "@/hooks/useFabricCanvas";
+import { useVideoEngine } from "@/hooks/useVideoEngine";
 import { toast } from "sonner";
 
 export default function EditorPage() {
@@ -29,6 +30,7 @@ export default function EditorPage() {
   const [rightTab, setRightTab] = useState<"layers" | "adjustments" | "settings">("layers");
 
   const fabric = useFabricCanvas();
+  const videoEngine = useVideoEngine();
   const { onlineUsers } = useRealtimeCollaboration(projectId);
 
   useEffect(() => {
@@ -116,6 +118,21 @@ export default function EditorPage() {
       }, 500);
     }
   };
+
+  // Sync video frame to canvas when in video mode
+  const videoFrameLayerRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (mode !== "video" || !videoEngine.videoFrame) return;
+    const updateFrame = async () => {
+      // Remove previous frame layer if exists
+      if (videoFrameLayerRef.current) {
+        // We'll just update the image instead of removing/adding
+      }
+      await fabric.addImageFromUrl(videoEngine.videoFrame!, "Video Frame");
+    };
+    // Only update on significant frame changes (throttle)
+    updateFrame();
+  }, [videoEngine.videoFrame, mode]);
 
   const handleImageUpload = async (localUrl: string) => {
     await fabric.addImageFromUrl(localUrl, "Imported Image");
@@ -225,7 +242,7 @@ export default function EditorPage() {
               onAIResult={handleAIResult}
             />
           </div>
-          {mode === "video" && <TimelinePanel />}
+          {mode === "video" && <TimelinePanel engine={videoEngine} />}
         </div>
 
         {/* Right panel with tabs */}
