@@ -324,6 +324,16 @@ export function useFabricCanvas() {
       const path = e.path as fabric.Path;
       if (path) {
         const tool = activeToolRef.current;
+        if (tool === "Eraser") {
+          // Apply destination-out to actually erase underlying content
+          path.set({
+            globalCompositeOperation: "destination-out",
+            stroke: "rgba(0,0,0,1)",
+            selectable: false,
+            evented: false,
+          });
+          canvas.requestRenderAll();
+        }
         const name = tool === "Eraser" ? "Eraser Stroke" : tool === "Pen" ? "Pen Path" : "Brush Stroke";
         addLayerForObject(path, name, "drawing");
       }
@@ -457,18 +467,22 @@ export function useFabricCanvas() {
     canvas.isDrawingMode = enable;
     if (enable) {
       let brush: fabric.BaseBrush;
-      if (brushType === "spray") {
+      if (mode === "eraser") {
+        // Real eraser using destination-out compositing
+        const pencilBrush = new fabric.PencilBrush(canvas);
+        pencilBrush.width = brushSize * 3;
+        pencilBrush.color = "rgba(0,0,0,1)";
+        brush = pencilBrush;
+        // We'll apply globalCompositeOperation after path is created
+      } else if (brushType === "spray") {
         const sprayBrush = new fabric.SprayBrush(canvas);
         sprayBrush.width = brushSize;
         sprayBrush.density = 20;
-        sprayBrush.color = mode === "eraser" ? canvasBg : brushColor;
+        sprayBrush.color = brushColor;
         brush = sprayBrush;
       } else {
         const pencilBrush = new fabric.PencilBrush(canvas);
-        if (mode === "eraser") {
-          pencilBrush.color = canvasBg;
-          pencilBrush.width = brushSize * 3;
-        } else if (mode === "pen") {
+        if (mode === "pen") {
           pencilBrush.color = brushColor;
           pencilBrush.width = Math.max(1, brushSize / 2);
         } else {
@@ -479,7 +493,7 @@ export function useFabricCanvas() {
       }
       canvas.freeDrawingBrush = brush;
     }
-  }, [brushColor, brushSize, brushType, canvasBg]);
+  }, [brushColor, brushSize, brushType]);
 
   const deleteSelected = useCallback(() => {
     const canvas = canvasRef.current;
