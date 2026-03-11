@@ -30,6 +30,7 @@ export default function EditorPage() {
   const [rightTab, setRightTab] = useState<"layers" | "adjustments" | "settings">("layers");
 
   const fabric = useFabricCanvas();
+  const videoEngine = useVideoEngine();
   const { onlineUsers } = useRealtimeCollaboration(projectId);
 
   useEffect(() => {
