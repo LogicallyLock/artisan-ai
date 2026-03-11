@@ -15,6 +15,7 @@ import { ImageAdjustmentsPanel } from "@/components/studio/ImageAdjustmentsPanel
 import { CanvasSettingsPanel } from "@/components/studio/CanvasSettingsPanel";
 import { useRealtimeCollaboration, CollaboratorAvatars } from "@/components/studio/RealtimeCollaboration";
 import { useFabricCanvas } from "@/hooks/useFabricCanvas";
+import { useVideoEngine } from "@/hooks/useVideoEngine";
 import { toast } from "sonner";
 
 export default function EditorPage() {
