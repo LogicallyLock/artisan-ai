@@ -227,7 +227,7 @@ export default function EditorPage() {
               onAIResult={handleAIResult}
             />
           </div>
-          {mode === "video" && <TimelinePanel />}
+          {mode === "video" && <TimelinePanel engine={videoEngine} />}
         </div>
 
         {/* Right panel with tabs */}
